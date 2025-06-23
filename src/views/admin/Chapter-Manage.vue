@@ -22,8 +22,8 @@
                         <template #dropdown>
                             <el-dropdown-menu>
                                 <el-dropdown-item command="previewContent">预览内容</el-dropdown-item>
-                                <el-dropdown-item command="updateChapter">编辑章节</el-dropdown-item>
-                                <el-dropdown-item command="deleteChapter">删除章节</el-dropdown-item>
+                                <el-dropdown-item command="updateChapter">编辑具体项目</el-dropdown-item>
+                                <el-dropdown-item command="deleteChapter">删除具体项目</el-dropdown-item>
                             </el-dropdown-menu>
                         </template>
                     </el-dropdown>

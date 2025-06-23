@@ -21,7 +21,7 @@
                         <el-dropdown-menu>
                             <el-dropdown-item command="updateQuestion">编辑问题</el-dropdown-item>
                             <el-dropdown-item command="deleteQuestion">删除问题</el-dropdown-item>
-                            <el-dropdown-item command="manageAnswer">管理答案</el-dropdown-item>
+                            <el-dropdown-item command="manageAnswer">管理回答</el-dropdown-item>
                         </el-dropdown-menu>
                     </template>
                 </el-dropdown>

@@ -42,7 +42,7 @@
                     </div>
                     <div v-if="course.registered" class="register-button">
                         <el-button type="primary" size="small" round>
-                            继续学习
+                            购买成功
                         </el-button>
                     </div>
                     <div v-else class="register-button">
@@ -50,7 +50,7 @@
                             立即购买
                         </el-button>
                         <el-button v-else @click="registerCourse" type="primary" size="small" round>
-                            开始学习
+                            购买成功
                         </el-button>
                     </div>
                 </div>
@@ -59,7 +59,7 @@
     </el-card>
     <el-card class="course-content">
         <el-tabs>
-            <el-tab-pane label="章节">
+            <el-tab-pane label="具体项目">
                 <CourseChapter ref="chapter-list" :registered="course.registered"/>
             </el-tab-pane>
             <el-tab-pane label="问答" lazy>

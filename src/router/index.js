@@ -90,7 +90,7 @@ const routes = [
                 component: TeachingCourseList,
                 meta: {
                     authRequired: true,
-                    rolePermitted: ['教师', '管理员']
+                    rolePermitted: ['导游', '管理员']
                 }
             },
             {
@@ -99,7 +99,7 @@ const routes = [
                 component: TeachingCourseCreate,
                 meta: {
                     authRequired: true,
-                    rolePermitted: ['教师', '管理员']
+                    rolePermitted: ['导游', '管理员']
                 }
             },
             {
@@ -108,7 +108,7 @@ const routes = [
                 component: TeachingCourseUpdate,
                 meta: {
                     authRequired: true,
-                    rolePermitted: ['教师', '管理员']
+                    rolePermitted: ['导游', '管理员']
                 }
             },
             {
@@ -117,7 +117,7 @@ const routes = [
                 component: TeachingChapterList,
                 meta: {
                     authRequired: true,
-                    rolePermitted: ['教师', '管理员']
+                    rolePermitted: ['导游', '管理员']
                 }
             },
             {
@@ -126,7 +126,7 @@ const routes = [
                 component: TeachingChapterCreate,
                 meta: {
                     authRequired: true,
-                    rolePermitted: ['教师', '管理员']
+                    rolePermitted: ['导游', '管理员']
                 }
             },
             {
@@ -135,7 +135,7 @@ const routes = [
                 component: TeachingChapterUpdate,
                 meta: {
                     authRequired: true,
-                    rolePermitted: ['教师', '管理员']
+                    rolePermitted: ['导游', '管理员']
                 }
             }
         ]

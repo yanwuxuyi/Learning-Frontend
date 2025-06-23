@@ -15,7 +15,7 @@
                     <el-icon>
                         <files/>
                     </el-icon>
-                    课程
+                    旅游项目
                 </router-link>
             </el-row>
         </el-col>
@@ -27,11 +27,11 @@
                     </el-icon>
                     搜索
                 </router-link>
-                <router-link v-if="auth.role.name !== '学生'" :to="{name: 'Teaching-Course-List'}">
+                <router-link v-if="auth.role.name !== '游客'" :to="{name: 'Teaching-Course-List'}">
                     <el-icon>
                         <suitcase/>
                     </el-icon>
-                    教学管理
+                    旅游项目管理
                 </router-link>
                 <router-link v-if="auth.role.name === '管理员'" :to="{name: 'Admin-Index'}">
                     <el-icon>

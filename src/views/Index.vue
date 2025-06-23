@@ -7,7 +7,7 @@
         </el-carousel-item>
     </el-carousel>
     <div class="text-center recommend-title">
-        推荐课程
+        推荐旅游项目
     </div>
     <el-tabs class="category-list">
         <el-tab-pane label="全部">

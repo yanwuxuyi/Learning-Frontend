@@ -1,6 +1,6 @@
 <template>
     <el-button type="primary" size="small" @click="createCourse" plain round>
-        新建课程
+        新建旅游项目
     </el-button>
     <ul>
         <li v-for="course in courses" class="list">
@@ -50,8 +50,8 @@
                         </span>
                         <template #dropdown>
                             <el-dropdown-menu>
-                                <el-dropdown-item command="updateCourse">编辑课程</el-dropdown-item>
-                                <el-dropdown-item command="manageChapter">管理章节</el-dropdown-item>
+                                <el-dropdown-item command="updateCourse">编辑项目</el-dropdown-item>
+                                <el-dropdown-item command="manageChapter">管理具体项目</el-dropdown-item>
                             </el-dropdown-menu>
                         </template>
                     </el-dropdown>

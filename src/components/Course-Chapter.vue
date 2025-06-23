@@ -5,7 +5,7 @@
             <span class="chapter-icon">
                 <el-icon v-if="chapter.type ==='video'"><video-play/></el-icon>
                 <el-icon v-if="chapter.type ==='text'"><document/></el-icon>
-                第{{ index + 1 }}章：{{ chapter.title }}
+                第{{ index + 1 }}个项目：{{ chapter.title }}
             </span>
             <span v-if="chapter.videoTime">
                 <el-icon><clock/></el-icon>{{ chapter.videoTime }}
@@ -60,7 +60,7 @@ export default {
                     this.chapter = chapter
                     this.dialogVisible = true
                 } else {
-                    this.$message.warning("请先参加或购买课程")
+                    this.$message.warning("请先参加或购买旅游项目")
                 }
             }
         }

@@ -10,7 +10,7 @@
         <el-form-item prop="price" label="价格">
             <el-input-number v-model="course.price" :precision="2" :step="0.1" :min="0"/>
         </el-form-item>
-        <el-form-item prop="categories" label="分类">
+        <el-form-item prop="categories" label="标签">
             <el-select v-model="course.categories" value-key="id" multiple>
                 <el-option-group v-for="parent in categories" :label="parent.name">
                     <el-option v-for="child in parent.children" :label="child.name" :value="child">
@@ -70,7 +70,7 @@ export default {
                     {required: true, message: '请选择价格', trigger: 'change'}
                 ],
                 categories: [
-                    {type: 'array', required: true, message: '请选择分类', trigger: 'change'}
+                    {type: 'array', required: true, message: '请选择标签', trigger: 'change'}
                 ],
                 coverPicture: [
                     {required: true, message: '请上传封面图片', trigger: 'change'}

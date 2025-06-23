@@ -14,10 +14,10 @@
                     <el-icon>
                         <collection-tag/>
                     </el-icon>
-                    分类
+                    标签
                 </template>
                 <el-menu-item index="1-1" :route="{name: 'Category-Manage'}">
-                    分类管理
+                    标签管理
                 </el-menu-item>
             </el-sub-menu>
             <el-sub-menu index="2">
@@ -25,10 +25,10 @@
                     <el-icon>
                         <reading/>
                     </el-icon>
-                    课程
+                    旅游项目
                 </template>
                 <el-menu-item index="2-1" :route="{name: 'Course-Manage'}">
-                    课程管理
+                    旅游项目管理
                 </el-menu-item>
             </el-sub-menu>
             <el-sub-menu index="3">

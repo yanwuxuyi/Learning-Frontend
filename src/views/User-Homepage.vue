@@ -34,7 +34,7 @@
         </div>
     </div>
     <el-tabs class="mt-2">
-        <el-tab-pane label="课程">
+        <el-tab-pane label="旅游项目">
             <UserCourse/>
         </el-tab-pane>
         <el-tab-pane label="笔记" lazy>

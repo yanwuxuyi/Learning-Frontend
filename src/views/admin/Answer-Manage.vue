@@ -17,8 +17,8 @@
                         </span>
                     <template #dropdown>
                         <el-dropdown-menu>
-                            <el-dropdown-item command="updateAnswer">编辑答案</el-dropdown-item>
-                            <el-dropdown-item command="deleteAnswer">删除答案</el-dropdown-item>
+                            <el-dropdown-item command="updateAnswer">编辑回答</el-dropdown-item>
+                            <el-dropdown-item command="deleteAnswer">删除回答</el-dropdown-item>
                         </el-dropdown-menu>
                     </template>
                 </el-dropdown>
@@ -30,7 +30,7 @@
                        :hide-on-single-page="true" @current-change="handlePageChange">
         </el-pagination>
     </div>
-    <el-dialog title="编辑答案" v-model="dialogVisible" center>
+    <el-dialog title="编辑回答" v-model="dialogVisible" center>
         <el-form ref="answer" :model="answer" :rules="rules">
             <el-form-item>
                 <el-input type="textarea" v-model.trim="answer.content" :autosize="{minRows: 4, maxRows: 10}"

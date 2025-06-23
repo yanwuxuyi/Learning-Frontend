@@ -1,6 +1,6 @@
 <template>
     <el-button type="primary" size="small" @click="createChapter(courseId)" plain round>
-        新建章节
+        新建旅游具体项目
     </el-button>
     <ul>
         <li v-for="(chapter, index) in chapters" class="list">
@@ -9,7 +9,7 @@
                     <span class="chapter-icon">
                         <el-icon v-if="chapter.type ==='video'"><video-play/></el-icon>
                         <el-icon v-if="chapter.type ==='text'"><document/></el-icon>
-                        第{{ index + 1 }}章：{{ chapter.title }}
+                        第{{ index + 1 }}个项目：{{ chapter.title }}
                     </span>
                 </el-col>
                 <el-col :offset="1" :span="1">
@@ -19,8 +19,8 @@
                         </span>
                         <template #dropdown>
                             <el-dropdown-menu>
-                                <el-dropdown-item command="updateChapter">编辑章节</el-dropdown-item>
-                                <el-dropdown-item command="deleteChapter">删除章节</el-dropdown-item>
+                                <el-dropdown-item command="updateChapter">编辑具体项目</el-dropdown-item>
+                                <el-dropdown-item command="deleteChapter">删除具体项目</el-dropdown-item>
                             </el-dropdown-menu>
                         </template>
                     </el-dropdown>

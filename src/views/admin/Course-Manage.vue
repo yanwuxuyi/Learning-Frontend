@@ -7,7 +7,7 @@
             <el-table-column align="center" label="ID" prop="id" width="80"/>
             <el-table-column align="center" label="名称" prop="name"/>
             <el-table-column align="center" label="价格" prop="price" width="100"/>
-            <el-table-column align="center" label="教师" prop="teacher.fullName" width="100"/>
+            <el-table-column align="center" label="导游" prop="teacher.fullName" width="100"/>
             <el-table-column align="center" label="平均评分" prop="averageScore" width="100"/>
             <el-table-column align="center" label="审核通过" prop="approved" width="100"
                              :formatter="(row, column, cellValue) => { return cellValue ? '是' : '否' }"/>
@@ -21,10 +21,10 @@
                         </span>
                         <template #dropdown>
                             <el-dropdown-menu>
-                                <el-dropdown-item command="updateCourse">编辑课程</el-dropdown-item>
-                                <el-dropdown-item command="deleteCourse">删除课程</el-dropdown-item>
-                                <el-dropdown-item command="manageChapter">管理章节</el-dropdown-item>
-                                <el-dropdown-item command="manageQuestion">管理问题</el-dropdown-item>
+                                <el-dropdown-item command="updateCourse">编辑项目</el-dropdown-item>
+                                <el-dropdown-item command="deleteCourse">删除项目</el-dropdown-item>
+                                <el-dropdown-item command="manageChapter">管理具体项目</el-dropdown-item>
+                                <el-dropdown-item command="manageQuestion">管理问答</el-dropdown-item>
                                 <el-dropdown-item command="manageEvaluation">管理评价</el-dropdown-item>
                                 <el-dropdown-item command="manageNote">管理笔记</el-dropdown-item>
                             </el-dropdown-menu>
