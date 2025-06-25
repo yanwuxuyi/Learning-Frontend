@@ -46,64 +46,122 @@
 </template>
 
 <script>
-import {getCategories, getCourses} from '../utils/api'
-import {buildTree} from '../utils/processing'
+// 1. 修改 import 语句：将 getCourseById 替换为 getCourse
+import { getCategories, getCourses, getCourse } from '../utils/api'
+import { buildTree } from '../utils/processing'
 
 export default {
-    name: "Course-List",
-    data() {
-        return {
-            categories: [],
-            courses: [],
-            size: 0,
-            categoryId: null,
-            pageNum: null,
-            pageSize: 20,
-            orderBy: 'create_time'
-        }
-    },
-    created() {
-        this.getCategories()
-        this.getCourses()
-    },
-    methods: {
-        getCategories() {
-            getCategories().then(result => {
-                if (result.code === '0000') {
-                    this.categories = buildTree(result.data)
-                }
-            })
-        },
-        getCourses() {
-            getCourses({
-                pageSize: this.pageSize,
-                pageNum: this.pageNum,
-                orderBy: this.orderBy,
-                categoryId: this.categoryId
-            }).then(result => {
-                if (result.code === '0000') {
-                    this.courses = result.data.list
-                    this.size = result.data.size
-                }
-            })
-        },
-        handleCategoryChange(categoryId) {
-            this.categoryId = categoryId
-            this.getCourses()
-        },
-        handleOrderChange(orderBy) {
-            this.orderBy = orderBy
-            this.getCourses()
-        },
-        handleSizeChange(pageSize) {
-            this.pageSize = pageSize
-            this.getCourses()
-        },
-        handlePageChange(pageNum) {
-            this.pageNum = pageNum
-            this.getCourses()
-        }
+  name: "Course-List",
+  data() {
+    return {
+      categories: [],
+      courses: [],
+      size: 0,
+      categoryId: null,
+      pageNum: null,
+      pageSize: 20,
+      orderBy: 'create_time'
     }
+  },
+  created() {
+    this.getCategories()
+    this.getCourses()
+  },
+  methods: {
+    // ... getCategories, getCourses, getStandardCourses 方法保持不变 ...
+    getCategories() {
+      getCategories().then(result => {
+        if (result.code === '0000') {
+          this.categories = buildTree(result.data)
+        }
+      })
+    },
+
+    getCourses() {
+      if (this.orderBy === 'average_score') {
+        this.getRecommendedCourses();
+      } else {
+        this.getStandardCourses();
+      }
+    },
+
+    getStandardCourses() {
+      getCourses({
+        pageSize: this.pageSize,
+        pageNum: this.pageNum,
+        orderBy: this.orderBy,
+        categoryId: this.categoryId
+      }).then(result => {
+        if (result.code === '0000') {
+          this.courses = result.data.list
+          this.size = result.data.size
+        }
+      })
+    },
+
+    // 2. 修改 getRecommendedCourses 方法中的函数调用
+    async getRecommendedCourses() {
+      const recommendedIdsRaw = localStorage.getItem('user_recommendations');
+
+      if (!recommendedIdsRaw) {
+        this.courses = [];
+        this.size = 0;
+        console.warn("localStorage 中没有找到 'user_recommendations'。");
+        return;
+      }
+
+      try {
+        const recommendedIds = JSON.parse(recommendedIdsRaw);
+        if (!Array.isArray(recommendedIds) || recommendedIds.length === 0) {
+          this.courses = [];
+          this.size = 0;
+          return;
+        }
+
+        // 使用您 api.js 中已有的 getCourse 函数
+        // 每个 id 会作为 pathVariable 传入
+        const coursePromises = recommendedIds.map(id => getCourse(id));
+
+        const results = await Promise.all(coursePromises);
+
+        const recommendedCourses = results
+            .filter(result => result && result.code === '0000' && result.data)
+            .map(result => result.data);
+
+        this.courses = recommendedCourses;
+        this.size = recommendedCourses.length;
+
+      } catch (error) {
+        console.error("解析或获取推荐课程失败:", error);
+        this.courses = [];
+        this.size = 0;
+      }
+    },
+
+    // ... handleCategoryChange, handleOrderChange, handleSizeChange, handlePageChange 方法保持不变 ...
+    handleCategoryChange(categoryId) {
+      this.categoryId = categoryId;
+      this.orderBy = 'create_time';
+      this.getCourses();
+    },
+
+    handleOrderChange(orderBy) {
+      this.orderBy = orderBy;
+      this.pageNum = 1;
+      this.categoryId = null;
+      this.getCourses();
+    },
+
+    handleSizeChange(pageSize) {
+      this.pageSize = pageSize
+      this.getCourses()
+    },
+
+    handlePageChange(pageNum) {
+      this.pageNum = pageNum
+      this.getCourses()
+    }
+  }
 }
 </script>
 

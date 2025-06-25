@@ -37,7 +37,8 @@ export default {
     return {
       keyword: '',
       courses: {},
-      size: 0
+      size: 0,
+      pageNum: 1
     }
   },
   methods: {
