@@ -12,6 +12,7 @@
     "@element-plus/icons-vue": "^1.0.0",
     "axios": "^0.26.0",
     "element-plus": "^2.0.3",
+    "marked": "^15.0.12",
     "vue": "^3.2.31",
     "vue-router": "4.0.12",
     "vuex": "^4.0.2"

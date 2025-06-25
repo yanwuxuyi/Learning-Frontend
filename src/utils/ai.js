@@ -30,15 +30,59 @@ aiRequest.interceptors.response.use(
     }
 );
 
-export function generate(prompt) {
+export function generate(userMessage, systemPrompt) {
     return aiRequest({
         url: "/generate",
         method: 'post',
         data: {
-            "model": "deepseek-r1:1.5b",
-            "prompt": prompt,
-            "stream": false,
-            'temperature': 0.1
+            model: "deepseek-r1:1.5b",
+            prompt: systemPrompt,
+            stream: false,
+            temperature: 0.1
+        },
+        headers: {
+            'Content-Type': 'application/json'
         }
     })
-} 
+}
+
+export async function generateStream(userMessage, systemPrompt, onData, onDone, onError) {
+    try {
+        const response = await fetch('/ai-api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                model: "deepseek-r1:1.5b",
+                prompt: `${systemPrompt}\n用户：${userMessage}`,
+                stream: true,
+                temperature: 0.1
+            })
+        });
+        const reader = response.body.getReader();
+        let fullText = '';
+        let decoder = new TextDecoder();
+        let buffer = '';
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            let lines = buffer.split('\n');
+            buffer = lines.pop(); // 最后一行可能不完整，留到下次
+            for (const line of lines) {
+                if (!line.trim()) continue;
+                try {
+                    const json = JSON.parse(line);
+                    if (json.response) {
+                        fullText += json.response;
+                        onData && onData(json.response, fullText);
+                    }
+                } catch (e) {
+                    // 忽略解析失败的行
+                }
+            }
+        }
+        onDone && onDone(fullText);
+    } catch (err) {
+        onError && onError(err);
+    }
+}
