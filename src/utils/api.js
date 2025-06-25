@@ -14,6 +14,14 @@ export function registerUser(data) {
         data
     })
 }
+//新增邮箱验证码
+export function sendEmailCode(data) {
+    return request({
+        url: '/oauth/user/sendEmailCode',
+        method: 'post',
+        data
+    })
+}
 
 export function getUsers(params) {
     return request({

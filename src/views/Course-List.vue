@@ -4,7 +4,7 @@
             <el-radio-button label="create_time">最新</el-radio-button>
             <el-radio-button label="average_score">推荐</el-radio-button>
         </el-radio-group>
-        <el-pagination :page-size="20" layout="sizes" @size-change="handleSizeChange"/>
+        <el-pagination :page-size="20" layout="sizes" @size-change="handleSizeChange" />
     </div>
     <el-tabs>
         <el-tab-pane label="全部">
@@ -20,9 +20,9 @@
     </el-tabs>
     <el-row :gutter="20">
         <el-col v-for="course in courses" :xs="24" :sm="6" class="course-card">
-            <router-link :to="{ name: 'Course-Content', params: { id: course.id }}">
+            <router-link :to="{ name: 'Course-Content', params: { id: course.id } }">
                 <el-card :body-style="{ 'padding': '0px', 'min-height': '300px' }">
-                    <el-image :src="course.coverPicture" class="card-cover-picture"/>
+                    <el-image :src="course.coverPicture" class="card-cover-picture" />
                     <div class="card-text">
                         <div class="card-course-name">
                             {{ course.name }}
@@ -40,12 +40,13 @@
     </el-row>
     <div class="pagination">
         <el-pagination background layout="prev, pager, next" :pager-count="5" :total="size" :page-size="20"
-                       :hide-on-single-page="true" @current-change="handlePageChange">
+            :hide-on-single-page="true" @current-change="handlePageChange">
         </el-pagination>
     </div>
 </template>
 
 <script>
+
 // 1. 修改 import 语句：将 getCourseById 替换为 getCourse
 import { getCategories, getCourses, getCourse } from '../utils/api'
 import { buildTree } from '../utils/processing'

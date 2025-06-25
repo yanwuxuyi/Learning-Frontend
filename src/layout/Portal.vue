@@ -13,18 +13,21 @@
                 <Footer/>
             </el-footer>
         </el-container>
+        <CustomerService/>
     </el-container>
 </template>
 
 <script>
 import Header from '../components/Header.vue'
 import Footer from '../components/Footer.vue'
+import CustomerService from '../components/Customer-Service.vue'
 
 export default {
     name: "Portal",
     components: {
         Header,
-        Footer
+        Footer,
+        CustomerService
     }
 }
 </script>
