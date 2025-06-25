@@ -46,18 +46,23 @@ export function generate(userMessage, systemPrompt) {
     })
 }
 
-export async function generateStream(userMessage, systemPrompt, onData, onDone, onError) {
+export async function generateStream(fullPrompt, onData, onDone, onError) {
     try {
         const response = await fetch('/ai-api/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 model: "deepseek-r1:1.5b",
-                prompt: `${systemPrompt}\n用户：${userMessage}`,
+                prompt: fullPrompt,
                 stream: true,
                 temperature: 0.1
             })
         });
+
+        if (!response.ok) {
+            throw new Error(`AI service request failed with status ${response.status}`);
+        }
+
         const reader = response.body.getReader();
         let fullText = '';
         let decoder = new TextDecoder();
@@ -66,7 +71,7 @@ export async function generateStream(userMessage, systemPrompt, onData, onDone, 
             const { done, value } = await reader.read();
             if (done) break;
             buffer += decoder.decode(value, { stream: true });
-            let lines = buffer.split('\n');
+            const lines = buffer.split('\n');
             buffer = lines.pop(); // 最后一行可能不完整，留到下次
             for (const line of lines) {
                 if (!line.trim()) continue;
@@ -74,14 +79,30 @@ export async function generateStream(userMessage, systemPrompt, onData, onDone, 
                     const json = JSON.parse(line);
                     if (json.response) {
                         fullText += json.response;
-                        onData && onData(json.response, fullText);
+                        onData && onData(fullText);
                     }
                 } catch (e) {
-                    // 忽略解析失败的行
+                    console.error("Failed to parse stream line:", line, e);
                 }
             }
         }
-        onDone && onDone(fullText);
+        
+        // 当数据流结束后，处理可能残留在缓冲区中的最后一部分数据
+        if (buffer.trim()) {
+            try {
+                const json = JSON.parse(buffer);
+                if (json.response) {
+                    fullText += json.response;
+                    onData && onData(fullText);
+                }
+            } catch (e) {
+                console.error("Failed to parse final stream buffer:", buffer, e);
+            }
+        }
+        
+        // 最终，确认所有数据处理完毕，正确调用 onDone 回调
+        onDone && onDone();
+
     } catch (err) {
         onError && onError(err);
     }

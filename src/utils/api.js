@@ -439,3 +439,14 @@ export function uploadVideo(data, onUploadProgress) {
         data
     })
 }
+
+export function addCourseToVectorDB(courseData) {
+    // 这个函数调用我们的Python后端来向量化课程
+    return fetch('/api/add_course', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(courseData)
+    });
+}

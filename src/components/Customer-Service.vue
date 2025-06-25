@@ -35,7 +35,16 @@
 import { generateStream } from '../utils/ai.js';
 import { marked } from 'marked';
 
-const SYSTEM_PROMPT = `你叫"旅小智"，是旅游社门户网站的智能客服。如果遇到无法解答的问题，请礼貌地建议用户联系客服人工服务。`;
+const SYSTEM_PROMPT = `假设你叫"旅小智"，是一个专业的旅游社智能客服。请根据下面提供的"相关旅游项目信息"，用友好、专业的口吻回答用户的问题。
+你的回答必须严格按照以下 XML 格式输出，不要有任何其他多余的文字：
+<thinking>
+[在此处分析用户问题和相关资料，这是你的思考过程]
+</thinking>
+<answer>
+[在此处给出直接、友好、面向用户的最终回复，不要包括任何思考过程]
+</answer>
+
+如果信息中有能回答用户问题的项目，介绍项目信息并建议购买。如果没有，请说明情况并提供其他建议。不要杜撰信息。`;
 
 export default {
   name: "CustomerService",
@@ -53,43 +62,86 @@ export default {
         const userMessage = this.newMessage;
         this.messages.push({ text: userMessage, sender: 'user' });
         this.newMessage = '';
-        // 先插入一个思考过程block
-        const thinkingMsg = { text: '', sender: 'ai', html: '', thinking: true };
-        this.messages.push(thinkingMsg);
-        let fullText = '';
+
+        // --- RAG 流程: 调用后端进行搜索 ---
+        let context = "没有找到相关的旅游项目信息。";
+        try {
+            const ragResponse = await fetch('/api/search_courses', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: userMessage })
+            });
+            const ragData = await ragResponse.json();
+            context = ragData.context;
+        } catch (error) {
+            console.error("RAG检索失败:", error);
+        }
+        
+        // 构建增强的Prompt
+        const augmentedPrompt = `${SYSTEM_PROMPT}\n\n相关旅游项目信息:\n${context}\n\n用户问题: "${userMessage}"`;
+        // --- RAG 流程结束 ---
+
+        const aiMsg = { text: '', sender: 'ai', html: '', thinking: true };
+        this.messages.push(aiMsg);
+
         generateStream(
-          userMessage,
-          SYSTEM_PROMPT,
-          (chunk, allText) => {
-            fullText = allText;
-            thinkingMsg.text = allText;
-            thinkingMsg.html = marked.parse(allText);
+          augmentedPrompt,
+          (fullText) => { // onData: 实时更新流式内容
+            aiMsg.text = fullText;
+            const thinkingMatch = fullText.match(/<thinking>([\s\S]*)/);
+            aiMsg.html = marked.parse(thinkingMatch ? thinkingMatch[1] : fullText); // 在流式传输时只显示思考部分
             this.$forceUpdate();
           },
-          (finalText) => {
-            // 分割思考和正式回答
-            const parts = finalText.split(/\n+|\r+|\r\n+/);
-            let answer = '';
-            let thinking = '';
-            for (let i = parts.length - 1; i >= 0; i--) {
-              if (parts[i].trim()) {
-                answer = parts[i].trim();
-                thinking = parts.slice(0, i).join('\n').trim();
-                break;
+          () => { // onDone: 流式结束后，分割思考和回答
+            console.log("--- AI 回复已完成 ---");
+            const fullText = aiMsg.text;
+            
+            const thinkingMatch = fullText.match(/<thinking>([\s\S]*?)<\/thinking>/);
+            const answerMatch = fullText.match(/<answer>([\s\S]*?)<\/answer>/);
+
+            let thinking = thinkingMatch ? thinkingMatch[1].trim() : '';
+            let answer = answerMatch ? answerMatch[1].trim() : '';
+
+            // Fallback: 如果标签不完整或不存在，则将所有内容视为回答
+            if (!answer && !thinking) {
+                answer = fullText;
+            } else if (!answer && thinking) {
+                // 只有思考标签，把思考当回答
+                answer = thinking;
+                thinking = '';
+            }
+
+            console.log("收到的完整回复: ", fullText);
+            console.log("解析后的 [思考] 部分: ", thinking);
+            console.log("解析后的 [回答] 部分: ", answer);
+
+            // 更新或移除思考区块
+            if (thinking) {
+              aiMsg.text = thinking;
+              aiMsg.html = marked.parse(thinking);
+            } else {
+              // 如果没有思考过程，则从消息列表中移除该区块
+              const index = this.messages.findIndex(m => m === aiMsg);
+              if (index > -1) {
+                this.messages.splice(index, 1);
               }
             }
-            // 更新思考过程block内容
-            thinkingMsg.text = thinking;
-            thinkingMsg.html = marked.parse(thinking);
-            // 插入正式回答气泡
+
+            // 如果有答案，则作为新消息气泡插入
             if (answer) {
-              this.messages.push({ text: answer, sender: 'ai', html: marked.parse(answer), thinking: false });
+              this.messages.push({
+                text: answer,
+                sender: 'ai',
+                html: marked.parse(answer),
+                thinking: false, // false 表示是回答气泡
+              });
             }
+
             this.$forceUpdate();
           },
-          (err) => {
-            thinkingMsg.text = 'AI 服务暂时不可用，请稍后再试。';
-            thinkingMsg.html = marked.parse(thinkingMsg.text);
+          (err) => { // onError
+            aiMsg.text = 'AI 服务暂时不可用，请稍后再试。';
+            aiMsg.html = marked.parse(aiMsg.text);
             this.$forceUpdate();
           }
         );

@@ -100,31 +100,28 @@ export default {
                 }
             })
         },
-        onSubmit(ref) {
-            if (this.editMode === 'create') {
-                this.$refs[ref].validate((valid) => {
-                    if (valid) {
-                        this.loading = true
+        onSubmit(user) {
+            this.$refs[user].validate((valid) => {
+                if (valid) {
+                    this.loading = true
+                    if (this.editMode === 'create') {
                         createCourse(this.course).then(result => {
                             if (result.code === '0000') {
-                                this.$message.success('创建成功！')
+                                this.$message.success("新增成功！")
+                                this.$emit('submit-success', this.course);
+                                this.$refs[user].resetFields()
                             }
                         }).finally(() => this.loading = false)
                     }
-                })
-            }
-            if (this.editMode === 'update') {
-                this.$refs[ref].validate((valid) => {
-                    if (valid) {
-                        this.loading = true
+                    if (this.editMode === 'update') {
                         updateCourse(this.course).then(result => {
                             if (result.code === '0000') {
                                 this.$message.success('更新成功！')
                             }
                         }).finally(() => this.loading = false)
                     }
-                })
-            }
+                }
+            })
         },
         onCancel() {
             if (this.separatePage) {

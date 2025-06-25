@@ -6,3 +6,6 @@ dist-ssr
 .idea/
 pnpm-lock.yaml
 
+backend/courses.faiss
+backend/courses.json
+
