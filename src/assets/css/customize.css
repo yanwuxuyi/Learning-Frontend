@@ -91,6 +91,30 @@ pre {
     display: flex;
     justify-content: space-between;
 }
+.pending-review {
+  opacity: 0.6;
+  position: relative;
+  pointer-events: none;
+}
+
+/* 点点点动画 */
+.pending-review::after {
+  content: '审核中...';
+  position: absolute;
+  top: 4px;
+  right: 12px;
+  font-size: 12px;
+  color: #999;
+  animation: dots 1.4s steps(3, end) infinite;
+}
+
+@keyframes dots {
+  0% { content: '审核中'; }
+  33% { content: '审核中.'; }
+  66% { content: '审核中..'; }
+  100% { content: '审核中...'; }
+}
+
 
 .flex-start {
     display: flex;

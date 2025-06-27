@@ -107,3 +107,101 @@ export async function generateStream(fullPrompt, onData, onDone, onError) {
         onError && onError(err);
     }
 }
+
+export async function generateComment(userMessage, systemPrompt) {
+  const apiKey = 'sk-ca86147be37a45a0a2185bf5e3585e6b'; 
+  const endpoint = 'https://api.deepseek.com/v1/chat/completions';
+
+  try {
+    const response = await axios.post(
+      endpoint,
+      {
+        model: 'deepseek-chat', 
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userMessage }
+        ],
+        temperature: 0.2,
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    const raw = response.data?.choices?.[0]?.message?.content || '';
+    return { response: raw };
+  } catch (err) {
+    console.error('[DeepSeek API 错误]', err?.response?.data || err.message);
+    throw err;
+  }
+}
+const bannedWords = [
+    '傻逼', '垃圾', 'fuck', '操你', '滚', '你妈', 'sb', 'shit', '死全家', '狗屎'
+    // 可继续扩展中英脏话、敏感词
+];
+
+function containsBannedWords(text) {
+    const lowered = text.toLowerCase();
+    return bannedWords.some(word => lowered.includes(word));
+}
+
+export async function moderateComment(commentText) {
+    // ✅ 第一步：本地违禁词检测
+    if (containsBannedWords(commentText)) {
+        console.warn(`[本地拦截] 命中违禁词: "${commentText}"`);
+        return { ok: false, reason: '评论包含违禁词' };
+    }
+
+    // ✅ 第二步：AI 检测（中文提示词）
+const systemPrompt = `
+你是一个评论审核系统，任务是判断评论是否违反社区规范。
+
+【违规行为包括】：
+1. 人身攻击、辱骂、侮辱性语言；
+2. 包含侮辱性、脏话、色情、淫秽词语
+3. 广告、推广、垃圾信息；
+4. 欺诈、误导性内容；
+5. 政治煽动、暴力威胁、反政府言论；
+6. 散播谣言、恶意评分、组织攻击。
+7. 涉及政治人物、国家元首、历史国家政治人物等敏感人物
+8. 涉及台湾、西藏、新疆、香港、澳门独立的内容
+9. 其他违法违规的言论
+
+⚠️ 注意：
+你只能用英文小写回答：
+- yes：评论可能违规；
+- no：评论内容正常。
+
+❌ 严禁输出任何解释说明或标点；
+❌ 严禁输出多个选项；
+✅ 回复时**只能输出以下两种之一：yes 或 no**
+
+---
+
+现在开始审核。
+
+评论内容如下：
+"${commentText}"
+
+请直接输出你的审核结论（只允许输出 yes 或 no）：
+`;
+
+    try {
+        const result = await generateComment(commentText, systemPrompt);
+        const rawResponse = (result.response || '').toLowerCase().trim();
+        console.log(`[AI 审核] 输入: "${commentText}" => 回复: "${rawResponse}"`);
+
+        const normalized = rawResponse.replace(/[^a-z]/g, '');
+        return normalized === 'no'
+            ? { ok: true }
+            : { ok: false, reason: 'AI 检测到评论可能包含不当内容' };
+    } catch (err) {
+        console.error("moderateComment error:", err);
+        return { ok: false, reason: 'AI 调用失败' };
+    }
+}
+
+
