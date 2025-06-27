@@ -1,3 +1,125 @@
+# -*- coding: utf-8 -*-
+from flask import Flask, request, jsonify, Response, stream_with_context, Blueprint
+from flask_cors import CORS
+import requests
+import pandas as pd
+import faiss
+import numpy as np
+import json
+import os
+import datetime
+import math
+from sqlalchemy import create_engine
+
+app = Flask(__name__)
+CORS(app, supports_credentials=True)
+
+price_suggestion_bp = Blueprint('price_suggestion', __name__)
+
+# ========== 定价相关API ==========
+import requests
+import pandas as pd
+
+# 读取城市热度
+CITY_CSV_PATH = 'scrape.csv'
+def get_city_hot(city_name):
+    # try:
+    #     df = pd.read_csv(CITY_CSV_PATH, encoding='gbk')
+    #     row = df[df['城市'] == city_name]
+    #     if not row.empty:
+    #         hot_str = str(row.iloc[0]['景点热度'])
+    #         # 提取数字部分
+    #         hot_num = int(''.join(filter(str.isdigit, hot_str)))
+    #         return hot_num
+    # except Exception as e:
+    #     print(f"读取城市热度失败: {e}")
+    return 10000  # 默认热度
+
+# 规则定价
+def rule_based_price(current_price, rating, hot):
+    # 规则：当前价格*0.5 + 热度*0.0001 + 评分*100
+    return round(current_price * 0.5 + hot * 0.0001 + rating * 100, 2)
+
+# AI定价（调用本地Ollama模型API）
+def ai_based_price_ollama(city, current_price, rating, hot):
+    try:
+        prompt = f"请根据以下信息为旅游产品智能定价：城市：{city}，当前价格：{current_price}，用户评分：{rating}，城市热度：{hot}。只返回一个数字，单位元。"
+        data = {
+            "model": "deepseek-r1:1.5b",
+            "prompt": prompt,
+            "stream": False,
+            "temperature": 0.1
+        }
+        resp = requests.post('http://127.0.0.1:11434/api/generate', json=data, timeout=60)
+        if resp.status_code == 200:
+            res_json = resp.json()
+            ai_response = res_json.get('response', '')
+            import re
+            price = float(re.findall(r"\d+\.?\d*", ai_response)[0])
+            return round(price, 2), ai_response
+        else:
+            print(f"Ollama接口返回异常: {resp.status_code}")
+    except Exception as e:
+        print(f"Ollama AI定价失败: {e}")
+    return None, ""
+
+@price_suggestion_bp.route('/api/price_suggestion', methods=['POST'])
+def price_suggestion():
+    req = request.get_json()
+    rating = req.get('rating')
+    product_name = req.get('product_name')
+    current_price = req.get('current_price')
+    if rating is None or product_name is None or current_price is None:
+        return jsonify({'error': '缺少评分、产品名称或当前价格参数'}), 400
+    # 获取城市热度
+    hot = get_city_hot(product_name)
+    # 规则定价
+    rule_price = rule_based_price(current_price, rating, hot)
+    # AI定价（Ollama）
+    ai_price, ai_full_response = ai_based_price_ollama(product_name, current_price, rating, hot)
+    return jsonify({
+        'rule_price': rule_price,
+        'ai_price': ai_price,
+        'hot': hot,
+        'ai_full_response': ai_full_response
+    })
+
+@price_suggestion_bp.route('/api/price_suggestion_stream', methods=['POST'])
+def price_suggestion_stream():
+    req = request.get_json()
+    rating = req.get('rating')
+    product_name = req.get('product_name')
+    current_price = req.get('current_price')
+    hot = get_city_hot(product_name)
+    prompt = f"请根据以下信息为旅游产品智能定价：城市：{product_name}，当前价格：{current_price}，用户评分：{rating}，城市热度：{hot}。只返回一个数字，单位元。"
+    data = {
+        "model": "deepseek-r1:1.5b",
+        "prompt": prompt,
+        "stream": True,
+        "temperature": 0.1
+    }
+    import time
+    def generate():
+        with requests.post('http://127.0.0.1:11434/api/generate', json=data, stream=True) as r:
+            buffer = b""
+            for chunk in r.iter_content(chunk_size=32):
+                if chunk:
+                    buffer += chunk
+                    while b'\n' in buffer:
+                        line, buffer = buffer.split(b'\n', 1)
+                        if line.strip():
+                            yield line + b'\n'
+                            # time.sleep(0.2)  # 可选：便于观察流式效果
+    return Response(
+        stream_with_context(generate()),
+        content_type='text/plain',
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no"
+        }
+    )
+
+# ========== 智能客服相关API ==========
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import faiss
@@ -6,9 +128,6 @@ import requests
 import json
 import os
 import datetime
-
-app = Flask(__name__)
-CORS(app)  # 允许跨域请求
 
 # --- 配置 ---
 EMBEDDING_MODEL = 'nomic-embed-text'
@@ -123,6 +242,8 @@ def search_courses():
     log_message(f"构建的上下文:\n{context}")
     
     return jsonify({'context': context})
+
+app.register_blueprint(price_suggestion_bp)
 
 if __name__ == '__main__':
     log_message("Flask服务器启动中...")
