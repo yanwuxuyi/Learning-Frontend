@@ -279,6 +279,72 @@ def get_vr_profile():
             connection.close()
 
 
+@app.route('/update-vector', methods=['POST', 'OPTIONS'])
+def update_course_in_vector_db():
+    # --- 处理 CORS 预检请求 ---
+    if request.method == 'OPTIONS':
+        # Flask-CORS 扩展通常会自动处理，但手动添加可以确保万无一失
+        return '', 200
+
+    # --- 处理实际的 POST 请求 ---
+    if request.method == 'POST':
+        # 1. 获取前端发送的课程数据
+        course_data = request.get_json()
+        if not course_data:
+            return jsonify({'error': 'Request body must be JSON.'}), 400
+
+        # 2. 从课程数据中提取需要的信息
+        #    例如：课程ID, 名称, 描述等
+        course_id = course_data.get('id')
+        name = course_data.get('name')
+        description = course_data.get('description')
+        cover_picture_url = course_data.get('coverPicture')  # 注意前端传过来的字段名
+
+        if not course_id or not name or not cover_picture_url:
+            return jsonify({'error': 'Missing required fields: id, name, coverPicture'}), 400
+
+        print(f"接收到更新AI知识库的请求，课程ID: {course_id}, 名称: {name}")
+
+        # 3. 在这里执行你的向量化和更新逻辑
+        #    这部分逻辑取决于你是如何存储和更新向量的。
+        #    下面是一个伪代码示例：
+        try:
+            # 3.1 提取封面图片的特征向量
+            response = requests.get(cover_picture_url, timeout=10)
+            response.raise_for_status()
+            features = extract_features(BytesIO(response.content))
+
+            if features is None:
+                return jsonify({'error': 'Failed to extract features from cover picture.'}), 500
+
+            # 3.2 更新你的向量数据库或索引文件 (例如 .pkl 文件)
+            # 这需要找到对应的 course_id 并替换其特征向量
+            # 注意：频繁读写 .pkl 文件性能不佳，实际生产环境建议使用专门的向量数据库
+
+            # --- 示例：更新内存中的索引 (如果适用) ---
+            if course_id in INDEX_IDS:
+                idx = INDEX_IDS.index(course_id)
+                INDEX_FEATURES[idx] = features
+                print(f"成功在内存中更新了课程ID {course_id} 的向量。")
+                # 如果需要持久化，则重新写入文件
+                # with open('db_features.pkl', 'wb') as f:
+                #     pickle.dump(INDEX_FEATURES, f)
+            else:
+                # 如果课程是新加入向量库的
+                INDEX_IDS.append(course_id)
+                # 注意：需要确保 INDEX_FEATURES 是 numpy array, 可能需要转换和拼接
+                # global INDEX_FEATURES # 如果需要修改全局变量
+                # INDEX_FEATURES = np.vstack([INDEX_FEATURES, features])
+                print(f"课程ID {course_id} 不在现有索引中，已添加。")
+                # 同样，需要持久化
+
+            # 4. 返回成功响应
+            return jsonify({'message': f'Course {course_id} updated in vector DB successfully.'}), 200
+
+        except Exception as e:
+            print(f"更新向量数据库时出错: {e}")
+            return jsonify({'error': f'An internal error occurred: {e}'}), 500
+
 # --- ↑↑↑ 添加结束 ↑↑↑ ---
 
 # ==============================================================================
@@ -298,5 +364,5 @@ if __name__ == '__main__':
         print(f"初始化失败: {e}")
         exit()
 
-    print("服务准备就绪，开始在 http://0.0.0.0:5000 运行...")
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    print("服务准备就绪，开始在 http://0.0.0.0:5001 运行...")
+    app.run(host='0.0.0.0', port=5001, debug=True)
