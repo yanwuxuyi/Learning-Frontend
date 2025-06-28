@@ -472,3 +472,23 @@ export function deleteCourseFromVectorDB(courseId) {
         body: JSON.stringify({ id: courseId })
     });
 }
+
+// 机票搜索相关API
+export function searchFlights(data) {
+    return fetch('http://localhost:5000/api/flights/search', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    }).then(response => response.json())
+}
+
+export function getFlightSearchStatus() {
+    return fetch('http://localhost:5000/api/flights/status', {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    }).then(response => response.json())
+}

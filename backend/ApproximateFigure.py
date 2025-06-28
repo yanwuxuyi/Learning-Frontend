@@ -157,5 +157,5 @@ if __name__ == '__main__':
         print(f"初始化失败: {e}")
         exit()
 
-    print("服务准备就绪，开始在 http://0.0.0.0:5001 运行...")
-    app.run(host='0.0.0.0', port=5001, debug=True)
+    print("服务准备就绪，开始在 http://0.0.0.0:5000 运行...")
+    app.run(host='0.0.0.0', port=5000, debug=True)

@@ -1,44 +1,49 @@
 <template>
-    <el-carousel ref="carousel" type="card" height="400px">
-        <el-carousel-item v-for="course in carousel">
-            <router-link :to="{ name: 'Course-Content', params: { id: course.id }}">
-                <el-image :src="course.coverPicture" class="carousel-picture"/>
-            </router-link>
-        </el-carousel-item>
-    </el-carousel>
-    <div class="text-center recommend-title">
-        推荐旅游项目
-    </div>
-    <el-tabs class="category-list">
-        <el-tab-pane label="全部">
-            <el-button size="small" @click="onChangeCategory()">
-                全部
-            </el-button>
-        </el-tab-pane>
-        <el-tab-pane v-for="category in categories" :label="category.name">
-            <el-button size="small" v-for="child in category.children" @click="onChangeCategory(child.id)">
-                {{ child.name }}
-            </el-button>
-        </el-tab-pane>
-    </el-tabs>
     <el-row :gutter="20">
-        <el-col v-for="course in courses" :xs="24" :sm="6" class="course-card">
-            <router-link :to="{ name: 'Course-Content', params: { id: course.id }}">
-                <el-card :body-style="{ 'padding': '0px', 'min-height': '300px' }">
-                    <el-image :src="course.coverPicture" class="card-cover-picture"/>
-                    <div class="card-text">
-                        <div class="card-course-name">
-                            {{ course.name }}
-                        </div>
-                        <div class="card-course-price" v-if="course.price !== 0">
-                            ￥{{ course.price }}
-                        </div>
-                        <div class="card-course-price free" v-else>
-                            免费
-                        </div>
-                    </div>
-                </el-card>
-            </router-link>
+        <!-- 左侧：旅游项目 -->
+        <el-col :xs="24" :lg="24">
+            <el-carousel ref="carousel" type="card" height="400px">
+                <el-carousel-item v-for="course in carousel">
+                    <router-link :to="{ name: 'Course-Content', params: { id: course.id }}">
+                        <el-image :src="course.coverPicture" class="carousel-picture"/>
+                    </router-link>
+                </el-carousel-item>
+            </el-carousel>
+            <div class="text-center recommend-title">
+                推荐旅游项目
+            </div>
+            <el-tabs class="category-list">
+                <el-tab-pane label="全部">
+                    <el-button size="small" @click="onChangeCategory()">
+                        全部
+                    </el-button>
+                </el-tab-pane>
+                <el-tab-pane v-for="category in categories" :label="category.name">
+                    <el-button size="small" v-for="child in category.children" @click="onChangeCategory(child.id)">
+                        {{ child.name }}
+                    </el-button>
+                </el-tab-pane>
+            </el-tabs>
+            <el-row :gutter="20">
+                <el-col v-for="course in courses" :xs="24" :sm="12" :md="8" :lg="6" class="course-card">
+                    <router-link :to="{ name: 'Course-Content', params: { id: course.id }}">
+                        <el-card :body-style="{ 'padding': '0px', 'min-height': '300px' }">
+                            <el-image :src="course.coverPicture" class="card-cover-picture"/>
+                            <div class="card-text">
+                                <div class="card-course-name">
+                                    {{ course.name }}
+                                </div>
+                                <div class="card-course-price" v-if="course.price !== 0">
+                                    ￥{{ course.price }}
+                                </div>
+                                <div class="card-course-price free" v-else>
+                                    免费
+                                </div>
+                            </div>
+                        </el-card>
+                    </router-link>
+                </el-col>
+            </el-row>
         </el-col>
     </el-row>
 </template>
@@ -99,5 +104,18 @@ export default {
 .recommend-title {
     font-size: 20px;
     margin-top: 30px
+}
+
+/* 响应式设计 */
+@media (max-width: 1200px) {
+    .course-card {
+        margin-bottom: 20px;
+    }
+}
+
+@media (max-width: 768px) {
+    .el-col {
+        margin-bottom: 20px;
+    }
 }
 </style>

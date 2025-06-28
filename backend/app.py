@@ -43,7 +43,7 @@ def rule_based_price(current_price, rating, hot):
 # AI定价（调用本地Ollama模型API）
 def ai_based_price_ollama(city, current_price, rating, hot):
     try:
-        prompt = f"请根据以下信息为旅游产品智能定价：城市：{city}，当前价格：{current_price}，用户评分：{rating}，城市热度：{hot}。只返回一个数字，单位元。"
+        prompt = f"请根据以下信息为旅游产品智能定价：城市：{city}，当前价格：{current_price}，用户评分：{rating}。只返回一个数字，单位元。"
         data = {
             "model": "deepseek-r1:1.5b",
             "prompt": prompt,
@@ -91,7 +91,7 @@ def price_suggestion_stream():
     product_name = req.get('product_name')
     current_price = req.get('current_price')
     hot = get_city_hot(product_name)
-    prompt = f"请根据以下信息为旅游产品智能定价：城市：{product_name}，当前价格：{current_price}，用户评分：{rating}，城市热度：{hot}。只返回一个数字，单位元。"
+    prompt = f"请根据以下信息为旅游产品智能定价：城市：{product_name}，当前价格：{current_price}，用户评分：{rating}。只返回一个数字，单位元。"
     data = {
         "model": "deepseek-r1:1.5b",
         "prompt": prompt,
@@ -118,6 +118,77 @@ def price_suggestion_stream():
             "X-Accel-Buffering": "no"
         }
     )
+
+# ========== 机票搜索相关API ==========
+from flight_crawler import search_flights_api, cleanup_crawler
+
+@app.route('/api/flights/search', methods=['POST'])
+def search_flights():
+    """机票搜索API"""
+    try:
+        data = request.get_json()
+        departure = data.get('departure')
+        arrival = data.get('arrival')
+        departure_date = data.get('departureDate')
+        return_date = data.get('returnDate')
+        
+        if not departure or not arrival or not departure_date:
+            return jsonify({
+                'success': False,
+                'message': '缺少必要参数：出发地、目的地、出发日期'
+            }), 400
+        
+        print(f"开始搜索机票: {departure} -> {arrival}, 日期: {departure_date}")
+        
+        # 调用爬虫API
+        result = search_flights_api(departure, arrival, departure_date, return_date)
+        
+        if result.get('success'):
+            print(f"机票搜索成功，找到 {len(result.get('flights', []))} 个航班")
+        else:
+            print(f"机票搜索失败: {result.get('message')}")
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        print(f"机票搜索API错误: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'搜索失败: {str(e)}',
+            'flights': []
+        }), 500
+
+@app.route('/api/flights/status', methods=['GET'])
+def get_flight_search_status():
+    """获取机票搜索功能状态"""
+    try:
+        # 检查seleniumwire是否可用
+        import seleniumwire
+        return jsonify({
+            'available': True,
+            'message': '机票搜索功能可用'
+        })
+    except ImportError:
+        return jsonify({
+            'available': False,
+            'message': '机票搜索功能不可用，缺少seleniumwire依赖'
+        })
+
+@app.route('/api/flights/cleanup', methods=['POST'])
+def cleanup_flight_crawler():
+    """清理机票爬虫资源"""
+    try:
+        cleanup_crawler()
+        return jsonify({
+            'success': True,
+            'message': '爬虫资源清理成功'
+        })
+    except Exception as e:
+        print(f"清理爬虫资源失败: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'清理失败: {str(e)}'
+        }), 500
 
 # ========== 智能客服相关API ==========
 from flask import Flask, request, jsonify
@@ -199,13 +270,13 @@ def save_data(index, courses, course_index_mapping):
         json.dump(courses, f, ensure_ascii=False, indent=2)
     with open(COURSE_INDEX_MAPPING_PATH, 'w', encoding='utf-8') as f:
         json.dump(course_index_mapping, f, ensure_ascii=False, indent=2)
-    log_message("数据保存成功。")
+    log_message("数据保存完成。")
 
 def rebuild_index_from_courses(courses):
-    """根据课程数据重建FAISS索引和映射"""
-    log_message("正在重建FAISS索引...")
-    index = faiss.IndexFlatL2(VECTOR_DIMENSION)
-    course_index_mapping = {}
+    """从课程数据重建FAISS索引和映射"""
+    log_message(f"正在从 {len(courses)} 个课程重建FAISS索引...")
+    new_index = faiss.IndexFlatL2(VECTOR_DIMENSION)
+    new_mapping = {}
     
     for i, course in enumerate(courses):
         # 安全检查：确保课程数据包含id字段
@@ -216,15 +287,15 @@ def rebuild_index_from_courses(courses):
         course_info = f"旅游项目名称: {course['name']}. 旅游安排: {course['description']}. 目的地: {course.get('destination', '')}. 价格: {course.get('price', '未提供')}元."
         vector = embed(course_info)
         if vector is not None:
-            index.add(np.array([vector], dtype=np.float32))
-            course_index_mapping[str(course['id'])] = i
+            new_index.add(np.array([vector], dtype=np.float32))
+            new_mapping[str(course['id'])] = new_index.ntotal - 1
     
-    log_message(f"索引重建完成，共 {index.ntotal} 条记录。")
-    return index, course_index_mapping
+    log_message(f"索引重建完成，包含 {new_index.ntotal} 条记录。")
+    return new_index, new_mapping
 
 @app.route('/api/add_course', methods=['POST'])
 def add_course():
-    """接收新课程，向量化后添加到数据库"""
+    """添加课程，同时添加到向量数据库"""
     log_message("收到 /api/add_course 请求...")
     data = request.json
     if not data or 'name' not in data or 'description' not in data:

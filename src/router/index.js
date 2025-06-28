@@ -11,6 +11,7 @@ import CourseSearch from '../views/Course-Search.vue'
 import QuestionContent from '../views/Question-Content.vue'
 import UserHomepage from '../views/User-Homepage.vue'
 import UserSetting from '../views/User-Setting.vue'
+import FlightSearchPage from '../views/Flight-Search-Page.vue'
 import TeachingCourseList from '../views/teaching/Course-List.vue'
 import TeachingCourseCreate from '../views/teaching/Course-Create.vue'
 import TeachingCourseUpdate from '../views/teaching/Course-Update.vue'
@@ -65,6 +66,11 @@ const routes = [
                 path: '/courses/search',
                 name: 'Course-Search',
                 component: CourseSearch
+            },
+            {
+                path: '/flights',
+                name: 'Flight-Search-Page',
+                component: FlightSearchPage
             },
             {
                 path: '/questions/:id',

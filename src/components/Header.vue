@@ -17,6 +17,12 @@
                     </el-icon>
                     旅游项目
                 </router-link>
+                <router-link :to="{name: 'Flight-Search-Page'}">
+                    <el-icon>
+                        <location/>
+                    </el-icon>
+                    机票搜索
+                </router-link>
             </el-row>
         </el-col>
         <el-col :span="12">
@@ -94,9 +100,20 @@
 <script>
 import {mapState} from 'vuex'
 import {removeAuth, removeToken} from '../utils/auth'
+import {House, Files, Search, Suitcase, Monitor, User, Setting, Location} from '@element-plus/icons-vue'
 
 export default {
     name: "Header",
+    components: {
+        House,
+        Files,
+        Search,
+        Suitcase,
+        Monitor,
+        User,
+        Setting,
+        Location
+    },
     computed: mapState([
         'auth'
     ]),
