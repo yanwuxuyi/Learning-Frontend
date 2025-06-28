@@ -1,5 +1,38 @@
 import request from '../utils/request'
+import axios from "axios";
 
+export function uploadVrProfile(data) {
+    // 注意：这里的URL必须指向你的Python Flask应用
+    // 如果你的前端和Python后端不在同一个域或端口，需要配置代理或使用完整URL
+    // 假设Python后端运行在 http://localhost:5001
+    const pythonApiUrl = 'http://localhost:5001/vr/upload';
+
+    return axios.post(pythonApiUrl, data, {
+        headers: {
+            'Content-Type': 'multipart/form-data'
+        }
+    });
+}
+export function updateCourseInVectorDBxu(course) {
+    // 这里的URL需要指向您的Python后端用于更新向量数据库的端点
+    // 假设端点是 /update-vector
+    const pythonApiUrl = 'http://localhost:5001/update-vector';
+    return fetch(pythonApiUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(course),
+    });
+}
+export function getVrProfileByName(params) {
+    // 这里的URL必须指向你的Python Flask应用中用于查询VR资料的端点
+    const pythonApiUrl = 'http://localhost:5001/vr/profile';
+
+    // 根据你api.js文件的风格，你可能使用axios或request
+    // 这是一个使用axios的例子，因为它在你的文件中已经被导入
+    return axios.get(pythonApiUrl, { params });
+}
 export function getAuthUser() {
     return request({
         url: '/oauth/user',
