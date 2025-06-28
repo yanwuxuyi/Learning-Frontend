@@ -10,11 +10,13 @@
   },
   "dependencies": {
     "@element-plus/icons-vue": "^1.1.4",
+    "@vicons/carbon": "^0.13.0",
     "axios": "^0.26.0",
     "browser-image-compression": "^2.0.2",
     "echarts": "^5.6.0",
     "element-plus": "^2.0.3",
     "marked": "^15.0.12",
+    "naive-ui": "^2.42.0",
     "vue": "^3.2.31",
     "vue-router": "4.0.12",
     "vuex": "^4.0.2"

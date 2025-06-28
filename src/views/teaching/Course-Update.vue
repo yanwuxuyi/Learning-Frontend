@@ -1,5 +1,11 @@
 <template>
-    <CourseForm :course="course" editMode="update" separatePage="true"/>
+  <!-- ========== 修改：传递 showPanoramaUpload prop ========== -->
+  <CourseForm
+      :course="course"
+      editMode="update"
+      separatePage="true"
+      :showPanoramaUpload="true"
+  />
 </template>
 
 <script>

@@ -1,81 +1,83 @@
 <template>
-    <el-card>
-        <el-row>
-            <el-col :sm="12">
-                <el-image :src="course.coverPicture" class="cover-picture"/>
-            </el-col>
-            <el-col :sm="12">
-                <div class="course-info">
-                    <div class="course-name">
-                        {{ course.name }}
-                    </div>
-                    <div class="teacher-info">
-                        <el-avatar :src="course.teacher.profilePicture" class="float-left">
-                            {{ course.teacher.fullName }}
-                        </el-avatar>
-                        <span v-if="course.teacher.username" class="teacher-name user-name">
+  <el-card>
+    <el-row>
+      <el-col :sm="12">
+        <el-image :src="course.coverPicture" class="cover-picture"/>
+      </el-col>
+      <el-col :sm="12">
+        <div class="course-info">
+          <div class="course-name">
+            {{ course.name }}
+          </div>
+          <div class="teacher-info">
+            <el-avatar :src="course.teacher.profilePicture" class="float-left">
+              {{ course.teacher.fullName }}
+            </el-avatar>
+            <span v-if="course.teacher.username" class="teacher-name user-name">
                              <router-link :to="{ name: 'User-Homepage', params: { username: course.teacher.username }}">
                                  {{ course.teacher.fullName }}
                              </router-link>
                         </span>
-                    </div>
-                    <div class="course-price" v-if="course.price !== 0">
-                        ￥{{ course.price }}
-                    </div>
-                    <div class="course-price free" v-else>
-                        免费
-                    </div>
-                    <div class="course-description">
-                        简介：{{ course.description }}
-                    </div>
-                    <div class="average-score">
-                        <el-icon>
-                            <medal/>
-                        </el-icon>
-                        平均评分：
-                        <span v-if="course.averageScore">
+          </div>
+          <div class="course-price" v-if="course.price !== 0">
+            ￥{{ course.price }}
+          </div>
+          <div class="course-price free" v-else>
+            免费
+          </div>
+          <div class="course-description">
+            简介：{{ course.description }}
+          </div>
+          <div class="average-score">
+            <el-icon>
+              <medal/>
+            </el-icon>
+            平均评分：
+            <span v-if="course.averageScore">
                             {{ course.averageScore }}分
                         </span>
-                        <span v-else>
+            <span v-else>
                             暂无评分
                         </span>
-                    </div>
-                    <div v-if="course.registered" class="register-button">
-                        <el-button type="primary" size="small" round>
-                            购买成功
-                        </el-button>
-                    </div>
-                    <div v-else class="register-button">
-                        <el-button v-if="course.price !== 0" @click="buyCourse" type="primary" size="small" round>
-                            立即购买
-                        </el-button>
-                        <el-button v-else @click="registerCourse" type="primary" size="small" round>
-                            购买成功
-                        </el-button>
-                    </div>
-                </div>
-            </el-col>
-        </el-row>
-    </el-card>
-    <el-card class="course-content">
-        <el-tabs>
-            <el-tab-pane label="具体项目">
-                <CourseChapter ref="chapter-list" :registered="course.registered"/>
-            </el-tab-pane>
-            <el-tab-pane label="问答" lazy>
-                <CourseQuestion/>
-            </el-tab-pane>
-            <el-tab-pane label="笔记" lazy>
-                <CourseNote/>
-            </el-tab-pane>
-            <el-tab-pane label="评价" lazy>
-                <CourseEvaluation/>
-            </el-tab-pane>
-        </el-tabs>
-    </el-card>
-    <orderDetail ref="order-detail"/>
+          </div>
+          <div v-if="course.registered" class="register-button">
+            <el-button type="primary" size="small" round>
+              购买成功
+            </el-button>
+          </div>
+          <div v-else class="register-button">
+            <el-button @click="showPanorama" type="warning" size="small" round style="margin-right: 10px;">
+              全景显示
+            </el-button>
+            <el-button v-if="course.price !== 0" @click="buyCourse" type="primary" size="small" round>
+              立即购买
+            </el-button>
+            <el-button v-else @click="registerCourse" type="primary" size="small" round>
+              购买成功
+            </el-button>
+          </div>
+        </div>
+      </el-col>
+    </el-row>
+  </el-card>
+  <el-card class="course-content">
+    <el-tabs>
+      <el-tab-pane label="具体项目">
+        <CourseChapter ref="chapter-list" :registered="course.registered"/>
+      </el-tab-pane>
+      <el-tab-pane label="问答" lazy>
+        <CourseQuestion/>
+      </el-tab-pane>
+      <el-tab-pane label="笔记" lazy>
+        <CourseNote/>
+      </el-tab-pane>
+      <el-tab-pane label="评价" lazy>
+        <CourseEvaluation/>
+      </el-tab-pane>
+    </el-tabs>
+  </el-card>
+  <orderDetail ref="order-detail"/>
 </template>
-
 <script>
 import {getCourse, updateRegistrationOfCourse} from '../utils/api'
 import CourseChapter from '../components/Course-Chapter.vue'
@@ -135,7 +137,17 @@ export default {
         updateContent() {
             this.getCourse()
             this.$refs['chapter-list'].getChapters()
-        }
+        },
+      showPanorama() {
+        // 我们需要一种方式将课程名称或ID传递给全景页面
+        // 这里我们选择传递课程名称作为查询参数
+        this.$router.push({
+          name: 'Panorama-View', // 路由名称，下一步会定义
+          query: {
+            name: this.course.name
+          }
+        });
+      }
     }
 }
 </script>

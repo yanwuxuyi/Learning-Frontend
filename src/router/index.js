@@ -30,6 +30,7 @@ import NoteManage from '../views/admin/Note-Manage.vue'
 import UserManage from '../views/admin/User-Manage.vue'
 import RoleManage from '../views/admin/Role-Manage.vue'
 import NotFound from '../views/NotFound.vue'
+import PanoramaView from '../views/panorama/Panorama-View.vue'
 
 const routes = [
     {
@@ -206,6 +207,11 @@ const routes = [
                 component: RoleManage
             }
         ]
+    },
+    {
+        path: '/panorama',
+        name: 'Panorama-View',
+        component: PanoramaView
     },
     {
         path: '/:pathMatch(.*)',

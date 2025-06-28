@@ -1,10 +1,11 @@
 import os
 import pickle
+import uuid  # 用于生成唯一文件名
 import numpy as np
 from PIL import Image
 from io import BytesIO
 import base64
-import json  # 确保导入 json
+import json
 
 # --- Web & Database ---
 from flask import Flask, request, jsonify
@@ -20,6 +21,10 @@ from tensorflow.keras.models import Model
 from sklearn.metrics.pairwise import cosine_similarity
 import requests
 
+# --- 新增：对象存储 ---
+from minio import Minio
+from minio.error import S3Error
+
 # ==============================================================================
 # 1. 初始化和配置
 # ==============================================================================
@@ -32,9 +37,21 @@ os.environ.pop("https_proxy", None)
 app = Flask(__name__)
 CORS(app)
 
+# --- MinIO 客户端初始化 ---
+try:
+    minio_client = Minio(
+        os.getenv('MINIO_ENDPOINT'),
+        access_key=os.getenv('MINIO_ACCESS_KEY'),
+        secret_key=os.getenv('MINIO_SECRET_KEY'),
+        secure=False  # 如果您的MinIO没有配置SSL，请设为False
+    )
+    print("MinIO 客户端初始化成功。")
+except Exception as e:
+    print(f"MinIO 客户端初始化失败: {e}")
+    minio_client = None
+
 
 # --- 数据库、模型加载等函数 (这部分代码没有问题，保持原样) ---
-# ... (为简洁起见，省略 get_db_connection, extract_features, build_index, load_or_build_index 的代码) ...
 def get_db_connection():
     try:
         connection = pymysql.connect(
@@ -111,7 +128,6 @@ def load_or_build_index():
 
 @app.route('/search', methods=['POST'])
 def search_image():
-    # ... 此函数保持不变 ...
     if 'image' not in request.files: return jsonify({'error': '请求中未包含图片文件'}), 400
     file = request.files['image']
     if not file.filename: return jsonify({'error': '未选择任何图片文件'}), 400
@@ -137,8 +153,133 @@ def search_image():
         if connection: connection.close()
 
 
+# --- 新增VR资料上传接口 ---
+@app.route('/vr/upload', methods=['POST'])
+def upload_vr_profile():
+    """
+    接收表单数据（name 和 profile_picture），上传图片到MinIO，并将信息存入数据库的vr表。
+    """
+    # 1. 检查输入
+    if minio_client is None:
+        return jsonify({'error': '对象存储服务未初始化'}), 503  # 503 Service Unavailable
+
+    if 'profile_picture' not in request.files:
+        return jsonify({'error': '请求中未包含名为 "profile_picture" 的图片文件'}), 400
+    if 'name' not in request.form:
+        return jsonify({'error': '请求中未包含名为 "name" 的文本字段'}), 400
+
+    image_file = request.files['profile_picture']
+    name = request.form['name']
+
+    if image_file.filename == '':
+        return jsonify({'error': '未选择任何图片文件'}), 400
+    if not name:
+        return jsonify({'error': 'name 字段不能为空'}), 400
+
+    # 2. 上传图片到MinIO
+    try:
+        bucket_name = os.getenv('MINIO_BUCKET_VR', 'cover-pictures')
+
+        # 检查存储桶是否存在，如果不存在则创建
+        found = minio_client.bucket_exists(bucket_name)
+        if not found:
+            minio_client.make_bucket(bucket_name)
+            print(f"存储桶 '{bucket_name}' 已创建。")
+
+        # 为防止文件名冲突，生成一个唯一的文件名
+        file_ext = os.path.splitext(image_file.filename)[1]
+        object_name = f"{uuid.uuid4()}{file_ext}"
+
+        # 从文件流上传
+        image_file.seek(0, os.SEEK_END)
+        file_length = image_file.tell()
+        image_file.seek(0, os.SEEK_SET)
+
+        minio_client.put_object(
+            bucket_name,
+            object_name,
+            image_file,
+            length=file_length,
+            content_type=image_file.content_type
+        )
+
+        # 构造可访问的URL
+        image_url = f"http://{os.getenv('MINIO_ENDPOINT')}/{bucket_name}/{object_name}"
+        print(f"文件成功上传到MinIO，URL: {image_url}")
+
+    except S3Error as exc:
+        print(f"上传到MinIO时发生错误: {exc}")
+        return jsonify({'error': f'无法上传文件到对象存储: {exc}'}), 500
+
+    # 3. 将信息存入数据库
+    connection = get_db_connection()
+    if not connection:
+        # 注意：此时图片已上传到MinIO，但数据库失败。在生产环境中，您可能需要一个清理机制。
+        return jsonify({'error': '数据库连接失败，数据未保存'}), 500
+
+    try:
+        with connection.cursor() as cursor:
+            sql = "INSERT INTO `vr` (`name`, `profile_picture`) VALUES (%s, %s)"
+            cursor.execute(sql, (name, image_url))
+        connection.commit()
+    except pymysql.Error as e:
+        print(f"数据库插入错误: {e}")
+        # 同上，这里也需要考虑清理已上传的MinIO对象
+        return jsonify({'error': f'数据库写入失败: {e}'}), 500
+    finally:
+        if connection:
+            connection.close()
+
+    # 4. 返回成功响应
+    return jsonify({
+        'status': 'success',
+        'message': 'VR资料上传成功',
+        'data': {
+            'name': name,
+            'profile_picture_url': image_url
+        }
+    }), 201  # 201 Created
 
 
+# --- ↓↓↓ 在这里添加缺失的接口 ↓↓↓ ---
+@app.route('/vr/profile', methods=['GET'])
+def get_vr_profile():
+    """
+    根据查询参数 'name' 从数据库中查找对应的全景图片URL。
+    """
+    # 1. 从请求的查询参数中获取 'name'
+    name = request.args.get('name')
+    if not name:
+        return jsonify({'error': '缺少 "name" 查询参数'}), 400
+
+    # 2. 连接数据库
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({'error': '数据库连接失败'}), 500
+
+    # 3. 执行查询
+    try:
+        with connection.cursor() as cursor:
+            # 假设每个名称是唯一的，我们只取第一条记录
+            sql = "SELECT profile_picture FROM `vr` WHERE `name` = %s LIMIT 1"
+            cursor.execute(sql, (name,))
+            result = cursor.fetchone()
+
+            if result:
+                # 如果找到了，返回一个包含 profile_picture 的 JSON 对象和 200 OK
+                return jsonify(result), 200
+            else:
+                # 如果在数据库中没找到，返回一个错误信息和 404 Not Found
+                return jsonify({'error': '数据库中未找到匹配的VR资料'}), 404
+    except pymysql.Error as e:
+        print(f"数据库查询错误: {e}")
+        return jsonify({'error': '数据库查询失败'}), 500
+    finally:
+        if connection:
+            connection.close()
+
+
+# --- ↑↑↑ 添加结束 ↑↑↑ ---
 
 # ==============================================================================
 # 4. 启动应用

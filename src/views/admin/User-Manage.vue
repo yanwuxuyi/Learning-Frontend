@@ -1,23 +1,23 @@
 <template>
     <div v-if="editMode === 'create' || editMode === 'update'">
-        <UserForm :user="user" :editMode="editMode" @cancel="handleCancel" includeRole="true"/>
+        <UserForm :user="user" :editMode="editMode" @cancel="handleCancel" includeRole="true" />
     </div>
     <div v-else>
         <el-table ref="table" :data="users" style="width: 100%" border>
-            <el-table-column align="center" label="ID" prop="id" width="80"/>
+            <el-table-column align="center" label="ID" prop="id" width="80" />
             <el-table-column align="center" label="头像" width="80">
                 <template #default="scope">
-                    <el-avatar :src="scope.row.profilePicture" size="small"/>
+                    <el-avatar :src="scope.row.profilePicture" size="small" />
                 </template>
             </el-table-column>
-            <el-table-column align="center" label="用户名" prop="username" width="100"/>
-            <el-table-column align="center" label="姓名" prop="fullName" width="100"/>
-            <el-table-column align="center" label="性别" prop="gender" width="100"/>
-            <el-table-column align="center" label="角色" prop="role.name" width="100"/>
-            <el-table-column align="center" label="手机号码" prop="phoneNumber" width="150"/>
-            <el-table-column align="center" label="邮箱地址" prop="emailAddress" width="150"/>
-            <el-table-column align="center" label="创建时间" prop="createTime" width="150"/>
-            <el-table-column align="center" label="更新时间" prop="updateTime" width="150"/>
+            <el-table-column align="center" label="用户名" prop="username" width="100" />
+            <el-table-column align="center" label="姓名" prop="fullName" width="100" />
+            <el-table-column align="center" label="性别" prop="gender" width="100" />
+            <el-table-column align="center" label="角色" prop="role.name" width="100" />
+            <el-table-column align="center" label="手机号码" prop="phoneNumber" width="150" />
+            <el-table-column align="center" label="邮箱地址" prop="emailAddress" width="150" />
+            <el-table-column align="center" label="创建时间" prop="createTime" width="150" />
+            <el-table-column align="center" label="更新时间" prop="updateTime" width="150" />
             <el-table-column align="center" label="操作">
                 <template #header>
                     <el-button size="small" type="primary" @click="createUser">新增</el-button>
@@ -25,7 +25,9 @@
                 <template #default="scope">
                     <el-dropdown trigger="click" @command="handleCommand($event, scope.row)">
                         <span class="el-dropdown-link">
-                            <el-icon :size="20"><operation/></el-icon>
+                            <el-icon :size="20">
+                                <operation />
+                            </el-icon>
                         </span>
                         <template #dropdown>
                             <el-dropdown-menu>
@@ -39,19 +41,19 @@
         </el-table>
         <div class="pagination">
             <el-pagination :hide-on-single-page="true" :pager-count="5" :total="size" background
-                           layout="prev, pager, next" @current-change="handlePageChange">
+                layout="prev, pager, next" @current-change="handlePageChange">
             </el-pagination>
         </div>
     </div>
 </template>
 
 <script>
-import {deleteUser, getUsers} from '../../utils/api'
+import { deleteUser, getUsers } from '../../utils/api'
 import UserForm from '../../components/User-Form.vue'
 
 export default {
     name: "User-Manage",
-    components: {UserForm},
+    components: { UserForm },
     data() {
         return {
             user: {},
@@ -66,7 +68,7 @@ export default {
     },
     methods: {
         getUsers() {
-            getUsers({pageNum: this.pageNum}).then(result => {
+            getUsers({ pageNum: this.pageNum }).then(result => {
                 if (result.code === '0000') {
                     this.users = result.data.list
                     this.size = result.data.size
@@ -83,7 +85,7 @@ export default {
         },
         deleteUser(row) {
             this.$confirm("确定删除？").then(() => {
-                deleteUser(row.id).then(result => {
+                deleteUser(row.username).then(result => {
                     if (result.code === '0000') {
                         let index = this.users.indexOf(row)
                         this.users.splice(index, 1)
@@ -115,5 +117,4 @@ export default {
 }
 </script>
 
-<style>
-</style>
+<style></style>
