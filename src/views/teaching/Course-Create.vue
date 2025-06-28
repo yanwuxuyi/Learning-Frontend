@@ -27,6 +27,7 @@ export default {
     },
     methods: {
         onCourseSubmit(course) {
+            // 课程已经在Course-Form中创建成功，现在同步到向量数据库
             addCourseToVectorDB(course)
                 .then(res => res.json())
                 .then(data => {

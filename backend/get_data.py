@@ -76,7 +76,7 @@ class SpiderCrawl(threading.Thread):
             print(f'\033[0;36m{self.t_name}线程开始抓取{url}\033[0m')
             self.html_request(url)
             # 睡眠2s,要不然服务器检测阻断链接
-            time.sleep(2)
+            # time.sleep(2)
             print()
             print('\033[0;31m++++++++++++++++++++++++++++++++++++++++++++\033[0m')
 

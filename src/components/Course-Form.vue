@@ -55,7 +55,7 @@
 </template>
 
 <script>
-import {createCourse, getCategories, updateCourse, uploadCoverPicture} from '../utils/api'
+import {createCourse, getCategories, updateCourse, uploadCoverPicture, updateCourseInVectorDB} from '../utils/api'
 import {buildTree} from '../utils/processing'
 import axios from 'axios'
 import { generateStreamForPrice } from '../utils/ai.js'
@@ -125,6 +125,7 @@ export default {
                     if (this.editMode === 'create') {
                         createCourse(this.course).then(result => {
                             if (result.code === '0000') {
+                                this.course.id = result.data.id
                                 this.$message.success("新增成功！")
                                 this.$emit('submit-success', this.course);
                                 this.$refs[user].resetFields()
@@ -134,6 +135,20 @@ export default {
                     if (this.editMode === 'update') {
                         updateCourse(this.course).then(result => {
                             if (result.code === '0000') {
+                                // 同步更新向量数据库
+                                updateCourseInVectorDB(this.course)
+                                    .then(res => res.json())
+                                    .then(data => {
+                                        if (data.message) {
+                                            this.$message.success('课程已成功同步更新到AI知识库！');
+                                        } else {
+                                            this.$message.error(data.error || '同步更新到AI知识库失败。');
+                                        }
+                                    })
+                                    .catch(err => {
+                                        console.error("同步更新到向量数据库时出错:", err);
+                                        this.$message.error('同步更新到AI知识库时网络错误。');
+                                    });
                                 this.$message.success('更新成功！')
                             }
                         }).finally(() => this.loading = false)

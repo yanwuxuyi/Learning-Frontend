@@ -134,6 +134,7 @@ EMBEDDING_MODEL = 'nomic-embed-text'
 OLLAMA_API_URL = 'http://127.0.0.1:11434/api/embeddings'
 FAISS_INDEX_PATH = 'courses.faiss'
 COURSES_DATA_PATH = 'courses.json'
+COURSE_INDEX_MAPPING_PATH = 'course_index_mapping.json'  # 新增：维护课程ID和向量索引的映射
 VECTOR_DIMENSION = 768  # nomic-embed-text 模型的向量维度
 
 # --- 辅助函数 ---
@@ -156,8 +157,8 @@ def embed(text):
         return None
 
 def load_data():
-    """从文件加载FAISS索引和课程数据"""
-    log_message("正在加载FAISS索引和课程数据...")
+    """从文件加载FAISS索引、课程数据和索引映射"""
+    log_message("正在加载FAISS索引、课程数据和索引映射...")
     if os.path.exists(FAISS_INDEX_PATH):
         index = faiss.read_index(FAISS_INDEX_PATH)
         log_message(f"已加载现有FAISS索引，包含 {index.ntotal} 条记录。")
@@ -168,21 +169,59 @@ def load_data():
     if os.path.exists(COURSES_DATA_PATH):
         with open(COURSES_DATA_PATH, 'r', encoding='utf-8') as f:
             courses = json.load(f)
+        
+        # 数据清理：过滤掉没有id字段的无效数据
+        original_count = len(courses)
+        courses = [course for course in courses if 'id' in course]
+        if len(courses) < original_count:
+            log_message(f"数据清理完成：移除了 {original_count - len(courses)} 条无效记录（缺少id字段）")
+        
         log_message(f"已加载课程数据，共 {len(courses)} 个课程。")
     else:
         courses = []
         log_message("未找到课程数据文件。")
-    return index, courses
 
-def save_data(index, courses):
-    """将FAISS索引和课程数据保存到文件"""
-    log_message(f"正在保存FAISS索引 (共 {index.ntotal} 条记录) 和课程数据 (共 {len(courses)} 个课程)...")
+    if os.path.exists(COURSE_INDEX_MAPPING_PATH):
+        with open(COURSE_INDEX_MAPPING_PATH, 'r', encoding='utf-8') as f:
+            course_index_mapping = json.load(f)
+        log_message(f"已加载课程索引映射，共 {len(course_index_mapping)} 个映射。")
+    else:
+        course_index_mapping = {}
+        log_message("未找到课程索引映射文件。")
+    
+    return index, courses, course_index_mapping
+
+def save_data(index, courses, course_index_mapping):
+    """将FAISS索引、课程数据和索引映射保存到文件"""
+    log_message(f"正在保存FAISS索引 (共 {index.ntotal} 条记录)、课程数据 (共 {len(courses)} 个课程) 和索引映射 (共 {len(course_index_mapping)} 个映射)...")
     faiss.write_index(index, FAISS_INDEX_PATH)
     with open(COURSES_DATA_PATH, 'w', encoding='utf-8') as f:
         json.dump(courses, f, ensure_ascii=False, indent=2)
+    with open(COURSE_INDEX_MAPPING_PATH, 'w', encoding='utf-8') as f:
+        json.dump(course_index_mapping, f, ensure_ascii=False, indent=2)
     log_message("数据保存成功。")
 
-# --- API端点 ---
+def rebuild_index_from_courses(courses):
+    """根据课程数据重建FAISS索引和映射"""
+    log_message("正在重建FAISS索引...")
+    index = faiss.IndexFlatL2(VECTOR_DIMENSION)
+    course_index_mapping = {}
+    
+    for i, course in enumerate(courses):
+        # 安全检查：确保课程数据包含id字段
+        if 'id' not in course:
+            log_message(f"警告: 课程数据缺少id字段，跳过该记录: {course}")
+            continue
+            
+        course_info = f"旅游项目名称: {course['name']}. 旅游安排: {course['description']}. 目的地: {course.get('destination', '')}. 价格: {course.get('price', '未提供')}元."
+        vector = embed(course_info)
+        if vector is not None:
+            index.add(np.array([vector], dtype=np.float32))
+            course_index_mapping[str(course['id'])] = i
+    
+    log_message(f"索引重建完成，共 {index.ntotal} 条记录。")
+    return index, course_index_mapping
+
 @app.route('/api/add_course', methods=['POST'])
 def add_course():
     """接收新课程，向量化后添加到数据库"""
@@ -192,7 +231,13 @@ def add_course():
         log_message("请求失败: 课程数据无效。")
         return jsonify({'error': '课程数据无效'}), 400
 
-    index, courses = load_data()
+    index, courses, course_index_mapping = load_data()
+
+    # 如果没有ID，生成一个临时ID（基于时间戳）
+    if 'id' not in data:
+        import time
+        data['id'] = int(time.time() * 1000)  # 使用毫秒时间戳作为临时ID
+        log_message(f"为新课程生成临时ID: {data['id']}")
 
     course_info = f"旅游项目名称: {data['name']}. 旅游安排: {data['description']}. 目的地: {data.get('destination', '')}. 价格: {data.get('price', '未提供')}元."
     
@@ -200,13 +245,145 @@ def add_course():
     if vector is None:
         return jsonify({'error': '创建嵌入向量失败'}), 500
 
+    # 添加向量到索引
     index.add(np.array([vector], dtype=np.float32))
+    
+    # 添加课程数据
     courses.append(data)
     
-    save_data(index, courses)
+    # 更新映射关系
+    course_index_mapping[str(data['id'])] = index.ntotal - 1
+    
+    save_data(index, courses, course_index_mapping)
     
     log_message(f"课程 '{data['name']}' 添加成功。")
-    return jsonify({'message': '课程添加成功', 'id': len(courses) - 1}), 201
+    return jsonify({'message': '课程添加成功', 'id': data['id']}), 201
+
+@app.route('/api/update_course', methods=['PUT'])
+def update_course():
+    """更新课程，同时更新向量数据库中的对应向量"""
+    log_message("收到 /api/update_course 请求...")
+    data = request.json
+    if not data or 'id' not in data or 'name' not in data or 'description' not in data:
+        log_message("请求失败: 课程数据无效。")
+        return jsonify({'error': '课程数据无效'}), 400
+
+    index, courses, course_index_mapping = load_data()
+    
+    # 查找要更新的课程
+    course_id = str(data['id'])
+    
+    # 检查向量数据库中是否存在该课程
+    if course_id not in course_index_mapping:
+        log_message(f"课程ID {course_id} 在向量数据库中不存在，将直接添加新记录")
+        # 如果不存在，直接添加新记录
+        course_info = f"旅游项目名称: {data['name']}. 旅游安排: {data['description']}. 目的地: {data.get('destination', '')}. 价格: {data.get('price', '未提供')}元."
+        new_vector = embed(course_info)
+        if new_vector is None:
+            return jsonify({'error': '创建嵌入向量失败'}), 500
+
+        # 添加向量到索引
+        index.add(np.array([new_vector], dtype=np.float32))
+        
+        # 添加课程数据
+        courses.append(data)
+        
+        # 更新映射关系
+        course_index_mapping[str(data['id'])] = index.ntotal - 1
+        
+        save_data(index, courses, course_index_mapping)
+        
+        log_message(f"课程 '{data['name']}' 已添加到向量数据库。")
+        return jsonify({'message': '课程已添加到向量数据库'}), 201
+    
+    # 如果存在，执行正常的更新逻辑
+    log_message(f"课程ID {course_id} 在向量数据库中存在，执行更新操作")
+    
+    # 生成新的向量
+    course_info = f"旅游项目名称: {data['name']}. 旅游安排: {data['description']}. 目的地: {data.get('destination', '')}. 价格: {data.get('price', '未提供')}元."
+    new_vector = embed(course_info)
+    if new_vector is None:
+        return jsonify({'error': '创建嵌入向量失败'}), 500
+
+    # 更新FAISS索引中的向量
+    # 由于FAISS不支持直接更新，我们需要重建索引
+    log_message(f"正在更新课程 '{data['name']}' 的向量...")
+    
+    # 找到课程在courses列表中的位置
+    course_index = None
+    for i, course in enumerate(courses):
+        # 安全检查：确保课程数据包含id字段
+        if 'id' not in course:
+            log_message(f"警告: 课程数据缺少id字段，跳过该记录: {course}")
+            continue
+        if str(course['id']) == course_id:
+            course_index = i
+            break
+    
+    if course_index is None:
+        log_message(f"请求失败: 课程ID {course_id} 在课程列表中不存在。")
+        return jsonify({'error': '课程不存在'}), 404
+    
+    # 更新课程数据
+    courses[course_index] = data
+    
+    # 重建索引和映射
+    new_index, new_mapping = rebuild_index_from_courses(courses)
+    
+    # 保存更新后的数据
+    save_data(new_index, courses, new_mapping)
+    
+    log_message(f"课程 '{data['name']}' 更新成功。")
+    return jsonify({'message': '课程更新成功'}), 200
+
+@app.route('/api/delete_course', methods=['DELETE'])
+def delete_course():
+    """删除课程，同时从向量数据库中删除对应向量"""
+    log_message("收到 /api/delete_course 请求...")
+    data = request.json
+    if not data or 'id' not in data:
+        log_message("请求失败: 课程ID无效。")
+        return jsonify({'error': '课程ID无效'}), 400
+
+    index, courses, course_index_mapping = load_data()
+    
+    course_id = str(data['id'])
+    
+    # 检查向量数据库中是否存在该课程
+    if course_id not in course_index_mapping:
+        log_message(f"课程ID {course_id} 在向量数据库中不存在，忽略删除操作")
+        return jsonify({'message': '课程在向量数据库中不存在，已忽略删除操作'}), 200
+    
+    # 如果存在，执行正常的删除逻辑
+    log_message(f"课程ID {course_id} 在向量数据库中存在，执行删除操作")
+    
+    # 获取要删除的课程名称用于日志
+    course_name = None
+    for course in courses:
+        # 安全检查：确保课程数据包含id字段
+        if 'id' not in course:
+            log_message(f"警告: 课程数据缺少id字段，跳过该记录: {course}")
+            continue
+        if str(course['id']) == course_id:
+            course_name = course['name']
+            break
+    
+    if course_name is None:
+        log_message(f"请求失败: 课程ID {course_id} 在课程列表中不存在。")
+        return jsonify({'error': '课程不存在'}), 404
+    
+    # 从课程数据中删除
+    courses = [course for course in courses if str(course['id']) != course_id]
+    
+    # 重建索引和映射
+    log_message(f"正在删除课程 '{course_name}' 的向量...")
+    new_index, new_mapping = rebuild_index_from_courses(courses)
+    
+    # 保存更新后的数据
+    save_data(new_index, courses, new_mapping)
+    
+    log_message(f"课程 '{course_name}' 删除成功。")
+    return jsonify({'message': '课程删除成功'}), 200
 
 @app.route('/api/search_courses', methods=['POST'])
 def search_courses():
@@ -219,7 +396,7 @@ def search_courses():
     
     log_message(f"用户查询: '{query}'")
 
-    index, courses = load_data()
+    index, courses, course_index_mapping = load_data()
     if index.ntotal == 0:
         log_message("数据库为空，无法执行搜索。")
         return jsonify({'context': '没有可供查询的旅游项目。'})

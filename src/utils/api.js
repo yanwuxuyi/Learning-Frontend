@@ -450,3 +450,25 @@ export function addCourseToVectorDB(courseData) {
         body: JSON.stringify(courseData)
     });
 }
+
+export function updateCourseInVectorDB(courseData) {
+    // 这个函数调用我们的Python后端来更新向量数据库中的课程
+    return fetch('/api/update_course', {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(courseData)
+    });
+}
+
+export function deleteCourseFromVectorDB(courseId) {
+    // 这个函数调用我们的Python后端来从向量数据库中删除课程
+    return fetch('/api/delete_course', {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ id: courseId })
+    });
+}

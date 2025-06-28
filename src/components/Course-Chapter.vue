@@ -1,6 +1,6 @@
 <template>
     <div v-for="(chapter, index) in chapters" :key="index" class="chapter-content-block">
-        <h3>第{{ index + 1 }}个项目：{{ chapter.title }}</h3>
+        <h3>{{ chapter.title }}</h3>
         <video v-if="chapter.videoUrl" :src="chapter.videoUrl" height="405" width="720"
                controls controlslist="nodownload" disablePictureInPicture style="margin-bottom: 16px;"/>
         <pre v-if="chapter.textContent" class="text-content">
