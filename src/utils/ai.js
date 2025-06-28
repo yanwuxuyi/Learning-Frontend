@@ -205,3 +205,59 @@ const systemPrompt = `
 }
 
 
+
+
+export async function generateStreamForPrice(payload, onData, onDone, onError) {
+    try {
+        const response = await fetch('/api/price_suggestion_stream', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            throw new Error(`AI service request failed with status ${response.status}`);
+        }
+
+        const reader = response.body.getReader();
+        let fullText = '';
+        let decoder = new TextDecoder();
+        let buffer = '';
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop();
+            for (const line of lines) {
+                if (!line.trim()) continue;
+                try {
+                    const json = JSON.parse(line);
+                    if (json.response) {
+                        fullText += json.response;
+                        onData && onData(fullText);
+                    }
+                } catch (e) {
+                    // 不是JSON就直接拼接
+                    fullText += line;
+                    onData && onData(fullText);
+                }
+            }
+        }
+        if (buffer.trim()) {
+            try {
+                const json = JSON.parse(buffer);
+                if (json.response) {
+                    fullText += json.response;
+                    onData && onData(fullText);
+                }
+            } catch (e) {
+                fullText += buffer;
+                onData && onData(fullText);
+            }
+        }
+        onDone && onDone();
+    } catch (err) {
+        onError && onError(err);
+    }
+}

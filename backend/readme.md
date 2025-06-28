@@ -1,9 +1,11 @@
-cd backend
-conda activate pytorch
+# ollama
+ollama run deepseek-r1:1.5b    
+ollama run nomic-embed-text  
 
-# RAG+大模型
-pip install flask faiss-cpu requests numpy gunicorn
-python app.py
+
+# 智能客服，智能定价
+cd backend    
+python app.py 
 
 # 推荐算法
-python -m uvicorn api:app --reload
+python -m uvicorn api:app --reload   

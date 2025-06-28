@@ -39,7 +39,7 @@
                     </el-icon>
                     后台管理
                 </router-link>
-                <el-popover placement="bottom-end" :width="200">
+                <el-popover placement="bottom-end" :width="300">
                     <template #reference>
                         <el-button type="text" class="ml-2 mt-1">
                             <el-avatar :src="auth.profilePicture" :size="32" class="profile-picture">
@@ -124,6 +124,7 @@ export default {
 
 .user-popover {
     text-align: center;
+    min-width: 260px;
 }
 
 .user-popover a {

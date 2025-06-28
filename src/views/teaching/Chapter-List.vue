@@ -9,7 +9,7 @@
                     <span class="chapter-icon">
                         <el-icon v-if="chapter.type ==='video'"><video-play/></el-icon>
                         <el-icon v-if="chapter.type ==='text'"><document/></el-icon>
-                        第{{ index + 1 }}个项目：{{ chapter.title }}
+                        {{ chapter.title }}
                     </span>
                 </el-col>
                 <el-col :offset="1" :span="1">

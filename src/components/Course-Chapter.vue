@@ -1,46 +1,26 @@
 <template>
-    <ul>
-        <li v-for="(chapter, index) in chapters" class="list flex-between"
-            @click="viewChapter(chapter)">
-            <span class="chapter-icon">
-                <el-icon v-if="chapter.type ==='video'"><video-play/></el-icon>
-                <el-icon v-if="chapter.type ==='text'"><document/></el-icon>
-                第{{ index + 1 }}个项目：{{ chapter.title }}
-            </span>
-            <span v-if="chapter.videoTime">
-                <el-icon><clock/></el-icon>{{ chapter.videoTime }}
-            </span>
-        </li>
-    </ul>
-    <el-dialog :title="chapter.title" v-model="dialogVisible" width="760px" center destroy-on-close>
+    <div v-for="(chapter, index) in chapters" :key="index" class="chapter-content-block">
+        <h3>{{ chapter.title }}</h3>
         <video v-if="chapter.videoUrl" :src="chapter.videoUrl" height="405" width="720"
-               controls controlslist="nodownload" disablePictureInPicture/>
-        <pre v-else class="text-content">
+               controls controlslist="nodownload" disablePictureInPicture style="margin-bottom: 16px;"/>
+        <pre v-if="chapter.textContent" class="text-content">
             {{ chapter.textContent }}
         </pre>
-    </el-dialog>
+    </div>
 </template>
 
 <script>
 import {getChaptersOfCourse} from '../utils/api'
-import {mapState} from 'vuex'
 
 export default {
     name: "Course-Chapter",
-    props: [
-        'registered'
-    ],
+    props: [],
     data() {
         return {
             courseId: this.$route.params.id,
-            chapters: [],
-            chapter: {},
-            dialogVisible: false
+            chapters: []
         }
     },
-    computed: mapState([
-        'auth'
-    ]),
     created() {
         this.getChapters()
     },
@@ -51,18 +31,6 @@ export default {
                     this.chapters = result.data
                 }
             })
-        },
-        viewChapter(chapter) {
-            if (!this.auth) {
-                this.$router.push({name: 'Login'})
-            } else {
-                if (this.registered) {
-                    this.chapter = chapter
-                    this.dialogVisible = true
-                } else {
-                    this.$message.warning("请先参加或购买旅游项目")
-                }
-            }
         }
     }
 }
@@ -77,5 +45,14 @@ export default {
     line-height: 2;
     font-size: 16px;
     color: #303133;
+    white-space: pre-wrap;
+    margin-bottom: 16px;
+}
+.chapter-content-block {
+    margin-bottom: 32px;
+    padding: 16px;
+    background: #fafbfc;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
 }
 </style>

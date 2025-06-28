@@ -8,8 +8,21 @@
                       maxlength="500" show-word-limit/>
         </el-form-item>
         <el-form-item prop="price" label="价格">
-            <el-input-number v-model="course.price" :precision="2" :step="0.1" :min="0"/>
+            <el-input-number v-model="course.price" :precision="2" :step="0.1" :min="0" style="width: 200px;"/>
+            <el-button @click="getSmartPriceStream" :loading="loadingPrice" type="primary" style="margin-left:10px;">
+                智能价格建议
+            </el-button>
         </el-form-item>
+        <div class="ai-reply-bubble-area">
+            <div v-for="(msg, idx) in aiMessages" :key="idx" class="ai-bubble ai">
+                <img class="bubble-avatar" src="/pet01.jpg" alt="AI" />
+                <div class="bubble">{{ msg }}</div>
+            </div>
+            <div v-if="aiReply" class="ai-bubble ai">
+                <img class="bubble-avatar" src="/pet01.jpg" alt="AI" />
+                <div class="bubble">{{ aiReply }}</div>
+            </div>
+        </div>
         <el-form-item prop="categories" label="标签">
             <el-select v-model="course.categories" value-key="id" multiple>
                 <el-option-group v-for="parent in categories" :label="parent.name">
@@ -42,8 +55,10 @@
 </template>
 
 <script>
-import {createCourse, getCategories, updateCourse, uploadCoverPicture} from '../utils/api'
+import {createCourse, getCategories, updateCourse, uploadCoverPicture, updateCourseInVectorDB} from '../utils/api'
 import {buildTree} from '../utils/processing'
+import axios from 'axios'
+import { generateStreamForPrice } from '../utils/ai.js'
 
 export default {
     name: "Course-Form",
@@ -57,6 +72,9 @@ export default {
         return {
             categories: [],
             loading: false,
+            loadingPrice: false,
+            aiReply: "",
+            aiMessages: [],
             rules: {
                 name: [
                     {required: true, message: '请输入名称', trigger: 'blur'},
@@ -107,6 +125,7 @@ export default {
                     if (this.editMode === 'create') {
                         createCourse(this.course).then(result => {
                             if (result.code === '0000') {
+                                this.course.id = result.data.id
                                 this.$message.success("新增成功！")
                                 this.$emit('submit-success', this.course);
                                 this.$refs[user].resetFields()
@@ -116,6 +135,20 @@ export default {
                     if (this.editMode === 'update') {
                         updateCourse(this.course).then(result => {
                             if (result.code === '0000') {
+                                // 同步更新向量数据库
+                                updateCourseInVectorDB(this.course)
+                                    .then(res => res.json())
+                                    .then(data => {
+                                        if (data.message) {
+                                            this.$message.success('课程已成功同步更新到AI知识库！');
+                                        } else {
+                                            this.$message.error(data.error || '同步更新到AI知识库失败。');
+                                        }
+                                    })
+                                    .catch(err => {
+                                        console.error("同步更新到向量数据库时出错:", err);
+                                        this.$message.error('同步更新到AI知识库时网络错误。');
+                                    });
                                 this.$message.success('更新成功！')
                             }
                         }).finally(() => this.loading = false)
@@ -128,6 +161,48 @@ export default {
                 this.$router.back()
             } else {
                 this.$emit('cancel')
+            }
+        },
+        async getSmartPriceStream() {
+            if (!this.course.name) {
+                this.$message.warning('请先填写名称');
+                return;
+            }
+            const rating = this.course.user_rating || 4.5;
+            const product_name = this.course.name;
+            const current_price = this.course.price;
+            this.loadingPrice = true;
+            this.aiReply = "";
+            try {
+                await generateStreamForPrice(
+                    { rating, product_name, current_price },
+                    (fullText) => { 
+                        let cleanText = fullText.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+                        this.aiReply = cleanText;
+                        this.$forceUpdate(); 
+                    },
+                    () => {
+                        const match = this.aiReply.match(/\d+\.?\d*/);
+                        if (match) {
+                            this.course.price = parseFloat(match[0]);
+                            this.$message.success('已获取智能建议价格');
+                        } else {
+                            this.$message.error('未获取到建议价格');
+                        }
+                        if (this.aiReply) {
+                            this.aiMessages.push(this.aiReply);
+                        }
+                        this.aiReply = "";
+                        this.loadingPrice = false;
+                    },
+                    (err) => {
+                        this.$message.error('获取智能价格失败');
+                        this.loadingPrice = false;
+                    }
+                );
+            } catch (e) {
+                this.$message.error('获取智能价格失败');
+                this.loadingPrice = false;
             }
         }
     }
@@ -155,5 +230,40 @@ export default {
     color: #8c939d;
     width: 100px;
     line-height: 100px;
+}
+
+.ai-reply-bubble-area {
+    margin: 20px 0 0 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+.ai-bubble {
+    display: flex;
+    align-items: flex-end;
+    margin-bottom: 10px;
+}
+.bubble {
+    padding: 12px 18px;
+    border-radius: 18px;
+    max-width: 90%;
+    font-size: 15px;
+    line-height: 1.7;
+    box-shadow: 0 2px 12px rgba(255, 193, 7, 0.10);
+    word-break: break-all;
+    position: relative;
+    background: #fff;
+    color: #b28704;
+    border: 1.5px solid #ffe082;
+    margin-left: 8px;
+}
+.bubble-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #fff;
+    border: 1.5px solid #ffe082;
+    box-shadow: 0 2px 8px rgba(255, 193, 7, 0.10);
+    object-fit: cover;
 }
 </style>

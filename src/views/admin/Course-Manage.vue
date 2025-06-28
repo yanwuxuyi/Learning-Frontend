@@ -42,7 +42,7 @@
 </template>
 
 <script>
-import {deleteCourse, getCategoriesOfCourse, getCourse, getCourses} from '../../utils/api'
+import {deleteCourse, getCategoriesOfCourse, getCourse, getCourses, deleteCourseFromVectorDB} from '../../utils/api'
 import CourseForm from '../../components/Course-Form.vue'
 
 export default {
@@ -85,6 +85,21 @@ export default {
             this.$confirm("确定删除？").then(() => {
                 deleteCourse(row.id).then(result => {
                     if (result.code === '0000') {
+                        // 同步删除向量数据库中的对应数据
+                        deleteCourseFromVectorDB(row.id)
+                            .then(res => res.json())
+                            .then(data => {
+                                if (data.message) {
+                                    this.$message.success('课程已成功从AI知识库中删除！');
+                                } else {
+                                    this.$message.error(data.error || '从AI知识库删除失败。');
+                                }
+                            })
+                            .catch(err => {
+                                console.error("从向量数据库删除时出错:", err);
+                                this.$message.error('从AI知识库删除时网络错误。');
+                            });
+                        
                         let index = this.courses.indexOf(row)
                         this.courses.splice(index, 1)
                         this.$message.success("删除成功！")
